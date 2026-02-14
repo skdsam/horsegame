@@ -1,0 +1,1355 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Horse Rally — Early Hedge Jump</title>
+  <style>
+    :root {
+      --bg: #0b0e16;
+      --panel: #12162a;
+      --panel2: #0e1224;
+      --text: #eaf0ff;
+      --muted: #9aa3c7;
+      --accent: #7aa2ff;
+      --accent2: #56f0c1;
+      --danger: #ff6b8a;
+      --grass: #1e7c3a;
+      --gold: #ffd76a;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial
+    }
+
+    html,
+    body {
+      height: 100%
+    }
+
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #0b0c12, #0f1324 45%, #0b0c12);
+      color: var(--text)
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: rgba(10, 11, 18, .6);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid #1b2242
+    }
+
+    header .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px
+    }
+
+    .logo {
+      font-weight: 800;
+      letter-spacing: 0.5px
+    }
+
+    .chip {
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(122, 162, 255, .18);
+      border: 1px solid rgba(122, 162, 255, .25)
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 18px auto;
+      padding: 0 14px;
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 14px
+    }
+
+    @media (max-width:960px) {
+      main {
+        grid-template-columns: 1fr
+      }
+    }
+
+    .card {
+      background: linear-gradient(180deg, var(--panel), var(--panel2));
+      border: 1px solid #1a2250;
+      border-radius: 16px;
+      box-shadow: 0 16px 44px rgba(0, 0, 0, .35);
+      overflow: hidden
+    }
+
+    .card h2 {
+      margin: 0;
+      padding: 14px 16px;
+      border-bottom: 1px solid #1a2250;
+      font-size: 18px
+    }
+
+    .card .body {
+      padding: 14px
+    }
+
+    .pill {
+      font-size: 12px;
+      padding: 4px 8px;
+      border: 1px solid #2b356e;
+      border-radius: 999px;
+      background: #0e1430
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid #22306e;
+      background: linear-gradient(180deg, #1a2a6a, #162559);
+      color: #eaf0ff;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-weight: 600;
+      cursor: pointer
+    }
+
+    .btn:hover {
+      filter: brightness(1.05)
+    }
+
+    .btn:active {
+      transform: translateY(1px)
+    }
+
+    .btn.ghost {
+      background: transparent
+    }
+
+    .btn.primary {
+      border-color: #2b4bd1;
+      background: linear-gradient(180deg, #2b4bd1, #213aa7)
+    }
+
+    .btn.warn {
+      border-color: #7a1b34;
+      background: linear-gradient(180deg, #7a1b34, #5e1427)
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap
+    }
+
+    .small {
+      font-size: 12px;
+      color: var(--muted)
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse
+    }
+
+    th,
+    td {
+      padding: 8px 6px;
+      border-bottom: 1px dashed #24306a;
+      text-align: left;
+      font-size: 14px
+    }
+
+    th {
+      color: #a8b2d9;
+      font-weight: 600
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block
+    }
+
+    .stage {
+      position: relative;
+      overflow: hidden;
+      border-radius: 16px;
+      border: 1px solid #1a2250
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 560px;
+      background: linear-gradient(180deg, #74a2ff 0%, #8ec5ff 45%, var(--grass) 46%, #14632c 100%)
+    }
+
+    .overlay {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 10px 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      pointer-events: none
+    }
+
+    .commentary {
+      background: rgba(0, 0, 0, .45);
+      border: 1px solid rgba(255, 255, 255, .12);
+      padding: 10px 12px;
+      border-radius: 10px;
+      max-width: 70%;
+      backdrop-filter: blur(6px)
+    }
+
+    .mini {
+      background: rgba(0, 0, 0, .35);
+      border: 1px solid rgba(255, 255, 255, .15);
+      padding: 10px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px
+    }
+
+    .startbtn {
+      pointer-events: auto
+    }
+
+    .banner {
+      position: absolute;
+      inset: auto 16px 16px auto;
+      background: linear-gradient(135deg, #1e264d, #101735);
+      border: 1px solid #2a3270;
+      border-radius: 14px;
+      padding: 12px 14px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, .45);
+      max-width: 92%
+    }
+
+    .banner h3 {
+      margin: 0 0 8px 0
+    }
+
+    .banner .grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 6px 12px
+    }
+
+    footer {
+      max-width: 1200px;
+      margin: 16px auto 40px;
+      padding: 0 14px;
+      color: var(--muted)
+    }
+
+    /* START SCREEN */
+    .start {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(3, 5, 12, .7);
+      backdrop-filter: blur(6px)
+    }
+
+    .start .box {
+      background: linear-gradient(180deg, var(--panel), var(--panel2));
+      border: 1px solid #20306b;
+      border-radius: 18px;
+      max-width: 1020px;
+      width: 94%;
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 14px
+    }
+
+    @media (max-width:960px) {
+      .start .box {
+        grid-template-columns: 1fr
+      }
+    }
+
+    .side {
+      border-left: 1px solid #20306b;
+      padding-left: 14px
+    }
+
+    .tip {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      gap: 8px;
+      align-items: flex-start
+    }
+
+    .tip:before {
+      content: "💡"
+    }
+
+    /* Countdown + photo finish flash */
+    .countdown {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none
+    }
+
+    .countdown span {
+      font-size: 80px;
+      font-weight: 900;
+      text-shadow: 0 10px 30px rgba(0, 0, 0, .5)
+    }
+
+    .flash {
+      position: absolute;
+      inset: 0;
+      background: #fff;
+      opacity: 0;
+      pointer-events: none
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="wrap">
+      <div class="logo">🐎 <span style="opacity:.9">Horse Rally</span></div>
+      <div class="chip" id="raceTypeChip">Race: …</div>
+      <div class="chip" id="distanceChip">Distance: …</div>
+      <div class="chip" id="weatherTop">Weather: …</div>
+      <div style="flex:1"></div>
+      <button class="btn ghost" id="btnRestartFull" title="Full reset to setup">Reset to Setup</button>
+      <button class="btn warn" id="btnInstantReplay" title="Restart same card with same horses">Instant Replay</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="card" id="panelBoard">
+      <h2>Betting Board</h2>
+      <div class="body">
+        <div class="toolbar" style="margin-bottom:10px">
+          <button class="btn" id="btnFlat">Flat Race</button>
+          <button class="btn" id="btnHedges">Hedges</button>
+          <button class="btn primary" id="btnContinue">Continue ▸</button>
+        </div>
+        <div class="small" id="raceMeta"></div>
+        <div style="height:8px"></div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Horse</th>
+              <th>Odds</th>
+              <th>Trainer</th>
+              <th>Jockey</th>
+            </tr>
+          </thead>
+          <tbody id="tbodyHorses"></tbody>
+        </table>
+        <div style="height:10px"></div>
+        <div class="small" id="trevorPreview"></div>
+      </div>
+    </section>
+
+    <section class="card stage">
+      <canvas id="game" width="1200" height="560"></canvas>
+      <div class="overlay">
+        <div class="commentary" id="commentary">Welcome! Use the start screen to add players or click a horse here, then
+          start the race.</div>
+        <div class="mini">
+          <div class="legend" id="legend"></div>
+          <div class="pill" id="weatherChip">Weather: Clear</div>
+          <button class="btn startbtn" id="btnStart" style="display:none">Start Race</button>
+        </div>
+      </div>
+
+      <div class="countdown" id="countdown"><span id="countNum">3</span></div>
+      <div class="flash" id="flash"></div>
+
+      <div class="banner" id="finishBanner" style="display:none">
+        <h3 id="finishTitle">Race Finished!</h3>
+        <div class="grid" id="finishGrid"></div>
+        <div style="height:8px"></div>
+        <div id="playersResult" class="small" style="opacity:.9"></div>
+        <div style="height:8px"></div>
+        <div class="toolbar">
+          <button class="btn primary" id="btnPlayAgain">Play again</button>
+          <button class="btn" id="btnChangeCard">New Card</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Tips: Add players on the start screen • Click a horse or press 1–5 • Space starts • F=Flat, H=Hedges • High-energy
+    commentary on!
+  </footer>
+
+  <!-- START SCREEN -->
+  <div class="start" id="startModal">
+    <div class="box">
+      <div>
+        <div class="small" style="opacity:.9">Welcome to</div>
+        <h2 style="margin:4px 0 12px">Trevor Gray's Horse Rally</h2>
+
+        <div class="small">Race Card</div>
+        <div id="raceCard" class="pill"
+          style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#0e1430;border-color:#2c3a72;padding:10px 12px">
+        </div>
+
+        <div class="small" style="margin-top:12px">Players (max = number of horses)</div>
+        <div id="playersUI" style="margin:8px 0 12px;display:grid;gap:8px"></div>
+        <div class="toolbar" style="align-items:center">
+          <input id="playerName" placeholder="Player name" class="btn"
+            style="background:#0e1430;border-color:#24336e;width:180px" />
+          <select id="playerHorse" class="btn" style="background:#0e1430;border-color:#24336e"></select>
+          <button class="btn" id="btnAddPlayer">Add player</button>
+          <div style="flex:1"></div>
+          <button class="btn primary" id="btnQuickStart">Start Race Setup</button>
+        </div>
+        <div class="small" id="playersHint" style="margin-top:6px;opacity:.8">
+          Horses cannot be shared. Click a player badge to remove them.
+        </div>
+      </div>
+
+      <aside class="side">
+        <h3 style="margin:0 0 8px">Race Tips &amp; Form</h3>
+        <div class="tip" style="margin-bottom:8px">Late closers like a hot early pace — watch for surges after halfway.
+        </div>
+        <div class="tip" style="margin-bottom:8px">Inside lanes save ground but risk traffic — wide slingshots can win
+          late.</div>
+        <div class="tip" style="margin-bottom:12px">Wind &amp; rain nudge stumble chance and slow finishes.</div>
+        <div id="formList" class="small" style="display:grid;gap:8px"></div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    /* ========================== Utility ========================== */
+    const rand = (a, b) => a + Math.random() * (b - a);
+    const randi = (a, b) => Math.floor(rand(a, b + 1));
+    const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const shade = (hex, amt) => { let c = parseInt(hex.slice(1), 16), r = (c >> 16) + amt, g = ((c >> 8) & 255) + amt, b = (c & 255) + amt; return '#' + ((1 << 24) + (clamp(r, 0, 255) << 16) + (clamp(g, 0, 255) << 8) + clamp(b, 0, 255)).toString(16).slice(1) }
+
+    /* ========================== Config =========================== */
+    const NUM_HORSES = 5;
+    const LANES_Y = [120, 200, 280, 360, 440];
+    const START_X = 70;
+
+    /* Distance system */
+    const FURLONG_CHOICES = [5, 6, 7, 8, 10, 12, 16, 18];
+    const PX_PER_FURLONG = 230; // ↑ longer track per furlong
+    let raceFurlongs = 12;
+    let RACE_DISTANCE = raceFurlongs * PX_PER_FURLONG;
+    let FINISH_X = START_X + RACE_DISTANCE;
+
+    const BASE_FALL_PROB = 0.004;
+
+    /* Jump feel */
+    const JUMP_DUR = 900;
+    const JUMP_H = 22;
+    /* Early jump tuning */
+    const PRE_JUMP = 60;
+    const HEAD_START_MS = 140;
+    const LATE_WINDOW = 18;
+
+    /* Dynamic hedges (built per race) */
+    let HEDGES_X = [];
+
+    const COLORS = ["#ff526d", "#61a0ff", "#ffd85a", "#f070ff", "#36c7c7"];
+    const STATE = { BOARD: 0, PICK: 1, WAIT: 2, COUNTDOWN: 3, RACING: 4, FINISHED: 5 };
+
+    /* ======================= Assets ======================= */
+    const ASSETS = { grass: new Image(), horses: [new Image(), new Image(), new Image(), new Image(), new Image()], ready: false };
+    ASSETS.grass.src = 'grass.png';
+    ASSETS.horses[0].src = 'horse1.png';
+    ASSETS.horses[1].src = 'horse2.png';
+    ASSETS.horses[2].src = 'horse3.png';
+    ASSETS.horses[3].src = 'horse4.png';
+    ASSETS.horses[4].src = 'horse5.png';
+    Promise.all([...ASSETS.horses.map(img => new Promise(res => img.onload = res)), new Promise(res => ASSETS.grass.onload = res)]).then(() => ASSETS.ready = true);
+
+    /* ====================== Data pools & helpers ======================= */
+    const HORSE_NAMES = [
+      "Lightning Menzies", "Thunderbolt Miller", "Majesty Briggs", "Starlight Chapman", "Blaze Gray",
+      "Spirit Brind", "Apollo Menzies", "Comet Miller", "Dusk Briggs", "Midnight Chapman",
+      "Eclipse Gray", "Sundance Brind", "Rocket Menzies", "Storm Miller", "Mystic Briggs",
+      "Sapphire Chapman", "Wild Gray", "Charger Brind", "Racer Menzies", "Victory Miller",
+      "Phantom Briggs", "Galaxy Menzies", "Miracle Chapman", "Fury Miller", "Zephyr Briggs",
+      "Copper Chapman", "Inferno Miller", "Vortex Brind", "Mirage Gray", "Tempest Briggs",
+      "Dynamo Chapman", "Blitz Menzies", "Nova Miller", "Cosmos Brind",
+      "Sterling Baker", "Ironheart Davies", "Crimson Arrow", "Shadowfax Li", "Gale Dixon",
+      "Onyx Steele", "Solar Flare", "High Tide Jackson", "Avalanche Bell", "Whisper Wind",
+      "Canyon King", "Golden Spur", "Phoenix Ash", "Diamond Dust", "Silver Streak",
+      "Maverick Jones", "Tidal Wave", "Desert Hawk", "Spartan Gold", "Terra Firma",
+      "Granite Peak", "Emerald Fire", "Jade Runner", "Sky Marshal", "Swift Justice",
+      "Aether Drift", "Oracle Reed", "Zenith Power", "Steel Curtain", "Monarch Reign",
+      "Viper Strike", "Polaris Star", "Glacier Rush"
+    ];
+
+    const TRAINERS = [
+      "T. Smith", "K. Brown", "D. Johnson", "F. Martin", "B. Cooper", "L. Kramer",
+      "P. Davis", "G. White", "M. Wilson", "R. Taylor", "E. Harris", "A. King",
+      "J. Clark", "S. Hall", "C. Lewis", "H. Young", "W. Lee", "Z. Green",
+      "V. Carter", "O. Parker", "N. Hayes"
+    ];
+
+    const JOCKEYS = [
+      "J. Diaz", "R. Jackson", "M. Li", "S. Carter", "N. Hall", "W. Baker",
+      "C. Chen", "A. Patel", "L. Jones", "B. O'Connell", "E. Rodriguez", "G. Singh",
+      "K. Ito", "D. Murphy", "T. Vance", "V. Khan", "F. Evans", "H. Kim",
+      "P. Silva", "I. Weber", "Z. Scott"
+    ];
+
+    const OWNERS = [
+      "Riverstone Stables", "Blue Jay Racing", "Silver Oak Syndicate", "Northwind Farms", "Crimson Gate",
+      "Golden Crown Racing", "Willow Creek Farm", "Victory Line Stables", "Black Swan Syndicate",
+      "Rising Sun Ranch", "Emerald Isle Group", "Steel Barrier Stables", "Shadow Run Farms",
+      "Iron Horse Ventures", "Monarch Racing LLC"
+    ];
+    const LAST_TMPL = [
+      d => `Last race: ${d.pos} at Ascot, ${d.days} days ago`,
+      d => `Last race: ${d.pos} at Cheltenham, ${d.days} days ago`,
+      d => `Last race: ${d.pos} at Aintree, ${d.days} days ago`,
+      d => `Last race: ${d.pos} at Newmarket, ${d.days} days ago`,
+      d => `Last race: ${d.pos} at Goodwood, ${d.days} days ago`,
+    ];
+    const POS = ["1st", "2nd", "3rd", "4th"];
+    const randomOdds = () => `${randi(1, 12)}-${randi(1, 12)}`;
+    const pick = arr => arr[randi(0, arr.length - 1)];
+
+    /* Icons */
+    const raceIcons = { Flat: "🏁", Hedges: "🌿" };
+    const weatherIcons = { "Clear": "☀️", "Rain": "🌧️", "Wind": "💨", "Rain & Wind": "🌧️💨" };
+
+    /* ======================== Game state & UI ========================= */
+    let canvas, ctx, W, H, dpr, camX = 0;
+    let gameState = STATE.BOARD;
+    let useHedges = false;
+    let weather = "Clear";
+    let speedFactor = 1, windForce = 0, fallProb = BASE_FALL_PROB;
+
+    let startTime = 0, lastTs = 0;
+    let commentaryTs = 0, commentaryInterval = 950;
+    let commentary = "";
+
+    let horses = []; let baseCard = []; let playerPick = null; let players = [];
+    let finishTimes = []; let fallen = []; let jumpStart = [];
+    const model = [];
+    let currentLeader = -1; let leaderSince = 0;
+
+    /* Enhanced Visuals */
+    const particles = [];
+    let shake = 0;
+    function addParticle(x, y, color, speed, life) {
+      particles.push({ x, y, color, vx: -speed + rand(-10, 10), vy: rand(-10, 10), life, maxLife: life });
+    }
+
+    /* DOM */
+    const tbody = document.getElementById('tbodyHorses');
+    const legendEl = document.getElementById('legend');
+    const metaEl = document.getElementById('raceMeta');
+    const trevorEl = document.getElementById('trevorPreview');
+    const comEl = document.getElementById('commentary');
+    const weatherChip = document.getElementById('weatherChip');
+    const weatherTop = document.getElementById('weatherTop');
+    const banner = document.getElementById('finishBanner');
+    const bannerTitle = document.getElementById('finishTitle');
+    const bannerGrid = document.getElementById('finishGrid');
+    const playersResultEl = document.getElementById('playersResult');
+    const startModal = document.getElementById('startModal');
+    const btnStart = document.getElementById('btnStart');
+    const playersUI = document.getElementById('playersUI');
+    const playerNameInp = document.getElementById('playerName');
+    const playerHorseSel = document.getElementById('playerHorse');
+    const formList = document.getElementById('formList');
+    const countdownEl = document.getElementById('countdown');
+    const countNumEl = document.getElementById('countNum');
+    const flashEl = document.getElementById('flash');
+    const raceTypeChip = document.getElementById('raceTypeChip');
+    const distanceChip = document.getElementById('distanceChip');
+    const raceCard = document.getElementById('raceCard');
+
+    /* ============================ Setup ============================= */
+    function resize() {
+      const w = document.querySelector('.stage').clientWidth - 2;
+      const h = 560;
+      dpr = Math.min(2, window.devicePixelRatio || 1);
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      canvas.style.height = h + "px";
+      canvas.style.width = w + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      W = w; H = h;
+    }
+
+    /* Build hedge positions for a given race */
+    function buildHedges() {
+      HEDGES_X = [];
+      if (!useHedges) return;
+      const n = Math.max(3, Math.round(raceFurlongs / 2)); // 5f→3, 12f→6, 18f→9
+      for (let i = 0; i < n; i++) {
+        const t = 0.20 + (0.72 * (i + 1) / (n + 1));              // from 20% to ~92%
+        const x = Math.round(START_X + t * RACE_DISTANCE);
+        if (x < FINISH_X - 32) HEDGES_X.push(x);            // never after finish
+      }
+    }
+
+    function rollRaceTypeAndDistance(randomizeType = true) {
+      if (randomizeType) useHedges = Math.random() < 0.5;
+
+      raceFurlongs = pick(FURLONG_CHOICES);
+      RACE_DISTANCE = raceFurlongs * PX_PER_FURLONG;
+      FINISH_X = START_X + RACE_DISTANCE;
+
+      buildHedges();
+
+      raceTypeChip.textContent = `Race: ${useHedges ? 'Hedges' : 'Flat'}`;
+      distanceChip.textContent = `Distance: ${raceFurlongs}f`;
+
+      const typeTxt = `${raceIcons[useHedges ? 'Hedges' : 'Flat']} ${useHedges ? 'Hedges' : 'Flat'}`;
+      const distTxt = `📏 ${raceFurlongs}f`;
+      const w = weather || "Clear";
+      const wTxt = `${weatherIcons[w] ?? ''} ${w}`;
+      raceCard.innerHTML = `
+    <span class="pill" style="background:#0a1131;border-color:#2d3a7a">${typeTxt}</span>
+    <span class="pill" style="background:#0a1131;border-color:#2d3a7a">${distTxt}</span>
+    <span class="pill" style="background:#0a1131;border-color:#2d3a7a">Weather: ${wTxt}</span>
+  `;
+    }
+
+    function freshRaceMeta() {
+      const track = pick(["FAST", "GOOD", "SLOW", "SOFT"]);
+      const tod = `${randi(1, 12)}:${String(randi(0, 59)).padStart(2, '0')}`;
+      const raceNo = randi(1, 9);
+      metaEl.textContent = `Track: ${track} • Time: ${tod} • Race #${raceNo} • Type: ${useHedges ? 'Hedges' : 'Flat'} • Distance: ${raceFurlongs}f`;
+    }
+
+    function makeCard() {
+      const names = [...HORSE_NAMES].sort(() => Math.random() - 0.5).slice(0, NUM_HORSES);
+      baseCard = names.map((name, i) => ({
+        name, color: COLORS[i % COLORS.length], odds: randomOdds(),
+        trainer: pick(TRAINERS), jockey: pick(JOCKEYS), owner: pick(OWNERS),
+        last: pick(LAST_TMPL)({ pos: pick(POS), days: randi(5, 30) }),
+        laneY: LANES_Y[i], idx: i
+      }));
+    }
+
+    function seedHorses(fromCard = null) {
+      const card = fromCard || baseCard;
+      horses = card.map((c) => ({
+        ...c, x: START_X, speed: rand(110, 130),
+        img: ASSETS.horses[c.idx]
+      }));
+      model.length = 0;
+      horses.forEach(() => model.push({
+        pace: rand(104, 124), // slightly lower base pace
+        stamina: rand(0.82, 1.05),
+        aggression: rand(0.6, 1.3),
+        surgeT: rand(6.5, 12.5),
+        fatigue: 0,
+        momentum: 0,
+        boostT: 0
+      }));
+
+      finishTimes = Array(NUM_HORSES).fill(undefined);
+      fallen = Array(NUM_HORSES).fill(false);
+      jumpStart = Array(NUM_HORSES).fill(0);
+      playerPick = null;
+      camX = 0;
+      commentary = "Pick a horse to arm the start (or add players in the start screen).";
+      commentaryTs = performance.now();
+      leaderSince = 0; currentLeader = -1;
+
+      // table
+      tbody.innerHTML = '';
+      horses.forEach((h, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+      <td>${idx + 1}</td>
+      <td class="name">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="dot" style="background:${h.color}"></span>${h.name}
+        </div>
+        <div class="small" style="opacity:.85">${h.last}</div>
+      </td>
+      <td><span class="pill">${h.odds}</span></td>
+      <td>${h.trainer}</td>
+      <td>${h.jockey}</td>`;
+        tr.style.cursor = 'pointer';
+        tr.addEventListener('click', () => chooseHorse(idx));
+        tbody.appendChild(tr);
+      });
+
+      // legend
+      legendEl.innerHTML = '';
+      horses.forEach((h, i) => {
+        const tag = document.createElement('div');
+        tag.style.display = 'flex'; tag.style.alignItems = 'center'; tag.style.gap = '6px';
+        tag.innerHTML = `<span class="dot" style="background:${h.color}"></span><span class="small">${i + 1}</span>`;
+        legendEl.appendChild(tag);
+      });
+
+      buildTrevorPreview();
+      rebuildHorseSelect();
+      buildFormSidePanel();
+    }
+
+    function buildTrevorPreview() {
+      let out = `<b>Trevor's Famous Bookies — Preview</b><br/>`;
+      out += `Top fancy: <b>${horses[0].name}</b> (${horses[0].odds}), trained by ${horses[0].trainer} for ${horses[0].owner}. `;
+      out += `Value each-way: <b>${horses[1].name}</b> (${horses[1].odds}) — ${horses[1].last}. `;
+      out += `Keep an eye on <b>${horses[2].name}</b> late if they go too quick up front.`;
+      trevorEl.innerHTML = out;
+    }
+
+    function buildFormSidePanel() {
+      formList.innerHTML = '';
+      horses.forEach((h) => {
+        const row = document.createElement('div');
+        row.innerHTML = `
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <div class="dot" style="background:${h.color};flex:0 0 10px"></div>
+        <div>
+          <div><b>${h.name}</b> <span class="pill" style="margin-left:6px">${h.odds}</span></div>
+          <div class="small">Jockey: ${h.jockey} • Trainer: ${h.trainer}</div>
+          <div class="small" style="opacity:.85">${h.last}</div>
+        </div>
+      </div>`;
+        formList.appendChild(row);
+      });
+    }
+
+    function rebuildHorseSelect() {
+      const taken = new Set(players.map(p => p.horse));
+      playerHorseSel.innerHTML = '';
+      horses.forEach((h, i) => {
+        const opt = document.createElement('option');
+        opt.value = i; opt.textContent = `${i + 1} — ${h.name}`;
+        if (taken.has(i)) opt.disabled = true;
+        playerHorseSel.appendChild(opt);
+      });
+    }
+
+    function renderPlayersUI() {
+      playersUI.innerHTML = '';
+      players.forEach((p, idx) => {
+        const badge = document.createElement('div');
+        badge.className = 'pill';
+        badge.style.cursor = 'pointer';
+        badge.title = 'Click to remove';
+        badge.innerHTML = `<span class="dot" style="background:${horses[p.horse].color}"></span> ${p.name} — ${horses[p.horse].name}`;
+        badge.onclick = () => { players.splice(idx, 1); renderPlayersUI(); rebuildHorseSelect(); };
+        playersUI.appendChild(badge);
+      });
+    }
+
+    /* ===================== Flow ==================== */
+    function chooseHorse(i) {
+      if (![STATE.PICK, STATE.BOARD, STATE.WAIT].includes(gameState)) return;
+      playerPick = i;
+      commentary = `You picked ${horses[i].name}! Press Space or Start.`;
+      comEl.textContent = commentary;
+      [...tbody.children].forEach((tr, idx) => tr.style.background = idx === i ? 'rgba(122,162,255,.15)' : 'transparent');
+      gameState = STATE.WAIT;
+      btnStart.style.display = 'inline-block';
+    }
+
+    function setWeatherRandom() {
+      const w = pick(["Clear", "Rain", "Wind", "Rain & Wind"]);
+      weather = w;
+
+      if (w === "Clear") { fallProb = BASE_FALL_PROB; speedFactor = 1; windForce = 0; }
+      if (w === "Rain") { fallProb = BASE_FALL_PROB * 1.5; speedFactor = 0.9; windForce = 0; }
+      if (w === "Wind") { fallProb = BASE_FALL_PROB; speedFactor = 1; windForce = rand(-5, 5); }
+      if (w === "Rain & Wind") { fallProb = BASE_FALL_PROB * 1.5; speedFactor = 0.85; windForce = rand(-5, 5); }
+
+      const wTxt = `${(weatherIcons[w] ?? "")} ${w}`;
+      weatherChip.textContent = `Weather: ${w}`;
+      weatherTop.textContent = `Weather: ${w}`;
+
+      // refresh Race Card row to show updated weather icon
+      rollRaceTypeAndDistance(false);
+    }
+
+    function showCountdown(startCb) {
+      let n = 3;
+      countNumEl.textContent = n;
+      countdownEl.style.display = 'flex';
+      const iv = setInterval(() => {
+        n--; if (n <= 0) { clearInterval(iv); countdownEl.style.display = 'none'; startCb(); return; }
+        countNumEl.textContent = n;
+      }, 700);
+    }
+
+    function startRace() {
+      if (gameState !== STATE.WAIT) return;
+      // If you want the weather to stay as shown on setup, comment out the next line.
+      setWeatherRandom();
+
+      horses.forEach((h, i) => { h.x = START_X; fallen[i] = false; finishTimes[i] = undefined; jumpStart[i] = 0; });
+      model.forEach(m => { m.fatigue = 0; m.momentum = 0; m.surgeT = rand(6.5, 12.5); m.boostT = 0; });
+      startTime = performance.now();
+      lastTs = startTime; commentaryTs = startTime; commentary = "They're off!"; comEl.textContent = commentary;
+      banner.style.display = 'none';
+      btnStart.style.display = 'none';
+      flashEl.style.opacity = 0;
+      leaderSince = startTime; currentLeader = -1;
+      gameState = STATE.COUNTDOWN;
+      showCountdown(() => { gameState = STATE.RACING; });
+    }
+
+    function resetAllToSetup() {
+      startModal.style.display = 'flex';
+      rollRaceTypeAndDistance(true);
+      setWeatherRandom(); // do not overwrite to Clear
+      players.length = 0; renderPlayersUI();
+      makeCard(); freshRaceMeta(); seedHorses(); gameState = STATE.BOARD;
+      banner.style.display = 'none'; btnStart.style.display = 'none';
+    }
+
+    function instantReplay() {
+      setWeatherRandom(); // do not overwrite to Clear
+      freshRaceMeta(); seedHorses(baseCard); gameState = STATE.WAIT;
+      banner.style.display = 'none'; btnStart.style.display = 'inline-block';
+      comEl.textContent = 'Ready for an instant replay — same runners!';
+    }
+
+    /* =========================== Drawing ============================ */
+    function clearAndTileGrass() {
+      ctx.clearRect(0, 0, W, H);
+      if (!ASSETS.ready) { drawFallbackGrass(); return; }
+      const img = ASSETS.grass, scale = (H / img.height), tileW = img.width * scale;
+      const offset = -((camX * 0.6) % tileW);
+      for (let x = offset - tileW; x < W + tileW; x += tileW) {
+        ctx.drawImage(img, 0, 0, img.width, img.height, x, 0, tileW, H);
+      }
+    }
+    function drawFallbackGrass() {
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, '#6cc06c'); grad.addColorStop(1, '#1b8c33');
+      ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+    }
+
+    function drawLaneMarkers() {
+      ctx.setLineDash([10, 12]); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,.20)';
+      for (let i = 0; i < LANES_Y.length - 1; i++) {
+        const y = (LANES_Y[i] + LANES_Y[i + 1]) / 2 + 30;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      }
+      ctx.setLineDash([]);
+    }
+
+    function drawFenceAt(yCenter) {
+      const yTop = yCenter - 6, yBot = yCenter + 6;
+      ctx.strokeStyle = '#eaf0ff'; ctx.lineWidth = 2; ctx.globalAlpha = .95;
+      ctx.beginPath(); ctx.moveTo(0, yTop); ctx.lineTo(W, yTop); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, yBot); ctx.lineTo(W, yBot); ctx.stroke();
+      const postStride = 60; const phase = (camX * 0.6) % postStride;
+      ctx.fillStyle = '#ffffff';
+      for (let x = -phase; x <= W + postStride; x += postStride) {
+        ctx.fillRect(x - 2, yTop - 8, 4, (yBot - yTop) + 16);
+        ctx.beginPath(); ctx.arc(x, yTop - 8, 4, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function drawVerticalHedges() {
+      if (!useHedges) return;
+      ctx.save();
+      HEDGES_X.forEach(hx => {
+        if (hx >= FINISH_X - 2) return; // safety: never after finish
+        const sx = hx - camX;
+        if (sx < -40 || sx > W + 40) return;
+        LANES_Y.forEach((ly) => {
+          const y = ly + 26;
+          circle(sx - 12, y + 6, 14, '#0f5a27');
+          circle(sx + 2, y + 2, 18, '#177839');
+          circle(sx + 14, y, 10, '#1aa04a');
+          ctx.fillStyle = 'rgba(255,255,255,.28)';
+          ctx.fillRect(sx - 2, y - 10, 4, 20);
+        });
+      });
+      ctx.restore();
+      function circle(cx, cy, r, col) { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); }
+    }
+
+    function drawCheckeredLine(x, label) {
+      const sx = x - camX; if (sx < -40 || sx > W + 40) return;
+      const size = 8, top = 0, bottom = H;
+      for (let y = top; y < bottom; y += size) {
+        const col = Math.floor(y / size) % 2 ? '#000' : '#fff';
+        ctx.fillStyle = col; ctx.fillRect(sx - 3, y, 6, size);
+      }
+      ctx.font = '700 12px Inter';
+      const tw = ctx.measureText(label).width + 10;
+      ctx.fillStyle = 'rgba(0,0,0,.65)'; ctx.fillRect(sx - tw / 2, 12, tw, 16);
+      ctx.fillStyle = '#fff'; ctx.fillText(label, sx - tw / 2 + 5, 24);
+    }
+
+    function drawHorse(h, i, now) {
+      let y = h.laneY;
+      if (now - jumpStart[i] < JUMP_DUR) {
+        const t = (now - jumpStart[i]) / JUMP_DUR; y -= Math.sin(t * Math.PI) * JUMP_H;
+      }
+      y += Math.sin((now * 0.008) + (i * 1.1)) * 1.2;
+      const x = h.x - camX;
+
+      ctx.fillStyle = 'rgba(0,0,0,.35)';
+      ctx.beginPath(); ctx.ellipse(x + 40, y + 52, 34, 10, 0, 0, Math.PI * 2); ctx.fill();
+
+      if (ASSETS.ready && h.img && h.img.complete) {
+        ctx.drawImage(h.img, x - 10, y - 30, 110, 100);
+      } else {
+        ctx.fillStyle = h.color; roundRect(x, y, 84, 30, 18);
+        ctx.fillStyle = shade(h.color, -18);
+        ctx.beginPath(); ctx.moveTo(x + 74, y + 8); ctx.lineTo(x + 98, y + 16); ctx.lineTo(x + 74, y + 26); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = shade(h.color, -32);
+        ctx.fillRect(x + 10, y + 30, 6, 16); ctx.fillRect(x + 24, y + 30, 6, 16); ctx.fillRect(x + 54, y + 30, 6, 16); ctx.fillRect(x + 68, y + 30, 6, 16);
+        ctx.fillStyle = '#111b3a'; ctx.beginPath(); ctx.arc(x + 32, y + 6, 7, 0, Math.PI * 2); ctx.fill();
+      }
+
+      const label = h.name;
+      ctx.font = '600 12px Inter';
+      let tw = ctx.measureText(label).width + 10;
+      ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(x - 2, y - 18, tw, 16);
+      ctx.fillStyle = '#eaf0ff'; ctx.fillText(label, x + 3, y - 6);
+
+      if (fallen[i]) {
+        const text = 'Fell!'; const w = ctx.measureText(text).width + 10;
+        ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(x + 10, y + 56, w, 16);
+        ctx.fillStyle = '#ff6b8a'; ctx.font = '700 12px Inter'; ctx.fillText(text, x + 15, y + 68);
+      } else {
+        // Leader Indicator
+        if (i === currentLeader && finishTimes[i] == null) {
+          ctx.font = '24px serif';
+          ctx.fillText('👑', x + 35, y - 45);
+        }
+        // Boost Indicator
+        if (model[i] && model[i].boostT > 0) {
+          ctx.fillStyle = '#FBBC04';
+          ctx.font = '900 14px Inter';
+          ctx.fillText('>>>', x + 90, y);
+        }
+      }
+
+      function roundRect(rx, ry, w, h, r) {
+        const rr = Math.min(r, h / 2, w / 2); ctx.beginPath();
+        ctx.moveTo(rx + rr, ry); ctx.lineTo(rx + w - rr, ry); ctx.quadraticCurveTo(rx + w, ry, rx + w, ry + rr);
+        ctx.lineTo(rx + w, ry + h - rr); ctx.quadraticCurveTo(rx + w, ry + h, rx + w - rr, ry + h);
+        ctx.lineTo(rx + rr, ry + h); ctx.quadraticCurveTo(rx, ry + h, rx, ry + h - rr);
+        ctx.lineTo(rx, ry + rr); ctx.quadraticCurveTo(rx, ry, rx + rr, ry); ctx.closePath(); ctx.fill();
+      }
+    }
+
+    /* Minimap */
+    function drawMinimap() {
+      const panelX = 14, panelY = H - 88, panelW = W - 28, panelH = 70;
+      ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(panelX, panelY, panelW, panelH);
+      ctx.strokeStyle = 'rgba(255,255,255,.2)'; ctx.strokeRect(panelX, panelY, panelW, panelH);
+
+      const x0 = panelX + 16, x1 = panelX + panelW - 16, y = panelY + panelH / 2;
+      const g = ctx.createLinearGradient(x0, y, x1, y); g.addColorStop(0, '#8cb1ff'); g.addColorStop(1, '#56f0c1');
+      ctx.strokeStyle = g; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x0, y, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x1, y, 4, 0, Math.PI * 2); ctx.fill();
+
+      if (useHedges) {
+        ctx.fillStyle = '#1aa04a';
+        HEDGES_X.forEach(hx => {
+          if (hx >= FINISH_X) return;
+          const t = clamp((hx - START_X) / RACE_DISTANCE, 0, 1);
+          const xi = lerp(x0, x1, t);
+          ctx.beginPath(); ctx.arc(xi, y, 3.5, 0, Math.PI * 2); ctx.fill();
+        });
+      }
+
+      const leaderIdx = horses.reduce((best, _, idx) => horses[idx].x > horses[best].x ? idx : best, 0);
+      horses.forEach((h, i) => {
+        const t = clamp((h.x - START_X) / RACE_DISTANCE, 0, 1);
+        const xi = lerp(x0, x1, t);
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(xi, y, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = COLORS[i % COLORS.length]; ctx.beginPath(); ctx.arc(xi, y, 4.5, 0, Math.PI * 2); ctx.fill();
+        if (i === leaderIdx) {
+          ctx.strokeStyle = 'rgba(255,215,106,.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(xi, y, 8.5, 0, Math.PI * 2); ctx.stroke();
+        }
+      });
+    }
+
+    /* ======================== Commentary ======================== */
+    function randomComment() {
+      const acts = [
+        () => `${leadName()} holds the call — tempo honest.`,
+        () => `${pickRunner()} sneaks to the rail for cover.`,
+        () => `${pickRunner()} edges wider looking for daylight.`,
+        () => `Wind gust — some heads bobbing!`,
+        () => `${pickRunner()} travelling sweetly on the steel.`,
+        () => `${pickRunner()} asked to pick up; response is there.`,
+        () => `Pack compresses — swings and roundabouts!`,
+      ];
+      return pick(acts)();
+    }
+    const leadName = () => horses[horses.reduce((a, _, i) => horses[i].x > horses[a].x ? i : a, 0)].name;
+    const pickRunner = () => pick(horses).name;
+
+    function milestoneCalls() {
+      const lead = Math.max(...horses.map(h => h.x));
+      const prog = (lead - START_X) / RACE_DISTANCE;
+      if (prog > 0.25 && prog < 0.27) commentary = `Quarter gone — ${leadName()} shows the way.`;
+      else if (prog > 0.50 && prog < 0.52) commentary = `Halfway home — field well bunched.`;
+      else if (prog > 0.75 && prog < 0.77) commentary = `Three-quarters — moves coming from the pack!`;
+      else if (prog > 0.90 && prog < 0.92) commentary = `Final furlong! ${leadName()} asked for everything!`;
+    }
+
+    /* ====================== Rank helpers ====================== */
+    function ranksByX() { return [...horses.keys()].sort((a, b) => horses[b].x - horses[a].x); }
+    function rankOf(i, order) { return order.indexOf(i) + 1; }
+
+    /* -------- Distance-aware velocity cap -------- */
+    function vmaxForDistance() {
+      // 5f → ~160 px/s (sprint!), 18f → ~95 px/s (marathon)
+      const t = clamp((raceFurlongs - 5) / (18 - 5), 0, 1);
+      return Math.round(lerp(160, 95, t));
+    }
+
+    /* ========================== Dynamics =========================== */
+    function advanceHorse(i, dt, now, order) {
+      const h = horses[i], m = model[i];
+      if (fallen[i] || finishTimes[i] != null) return;
+
+      // Stumble chance (simulated fall)
+      if (Math.random() < fallProb * dt * 0.5) {
+        fallen[i] = true; m.momentum = -30;
+        // Add explosion of particles
+        for (let k = 0; k < 20; k++) addParticle(h.x + 50, h.laneY + 40, '#ff6b8a', 20, rand(0.5, 1.5));
+        shake = 10; // Trauma
+        return;
+      }
+
+      // AI Logic:
+      // 1. Base pace
+      let target = m.pace;
+
+      // 2. Rank-based rubber banding (Catch-up logic)
+      const rk = rankOf(i, order);
+      const isLeader = (rk === 1);
+      const rankFactor = (rk - 1) / (NUM_HORSES - 1); // 0 (leader) to 1 (last)
+
+      // Catch up: Last place gets a boost, Leader gets a drag if they are too far ahead
+      if (!isLeader) {
+        target += lerp(0, 15, rankFactor); // Up to +15 speed for last place
+      } else {
+        // Leader drag - prevents runaway wins
+        const leadGap = (order.length > 1) ? (h.x - horses[order[1]].x) : 0;
+        if (leadGap > 200) target -= 10; // Slow down if way ahead
+        if (leadGap > 400) target -= 20; // Drastically slow down
+      }
+
+      // 3. "Burst" mechanic - Random surges of energy
+      // Cooldown management
+      if (m.boostT > 0) {
+        m.boostT -= dt;
+        target += 25 * m.aggression; // HUGE burst speed
+        // Drain stamina faster during burst
+        m.fatigue += dt * 2.5;
+
+        // Visuals: Particles
+        if (Math.random() < 0.5) addParticle(h.x, h.laneY + 60, '#fff', 50, 0.4);
+        if (Math.random() < 0.5) addParticle(h.x, h.laneY + 60, h.color, 50, 0.4);
+      } else {
+        // Chance to trigger burst if behind or just random aggression
+        // Higher chance if behind (0.02 vs 0.005)
+        const burstChance = (rk > 1) ? 0.015 : 0.005;
+        if (Math.random() < burstChance && m.fatigue < 4) { // Only burst if not too tired
+          m.boostT = rand(1.5, 3.0); // 1.5s to 3s burst
+          commentary = `${h.name} is making a move!`;
+          commentaryTs = now;
+        }
+
+        // Recovery
+        if (m.fatigue > 0) m.fatigue -= dt * 0.2;
+      }
+
+      // 4. Fatigue / Stamina fade
+      // As race progresses, low stamina horses fade harder
+      const prog = (h.x - START_X) / RACE_DISTANCE;
+      if (prog > 0.7) {
+        // Late race fade
+        const staminaPenalty = (1.0 - m.stamina) * 50 * prog; // up to -25 speed
+        target -= staminaPenalty;
+
+        // Fatigue penalty
+        target -= m.fatigue * 2;
+      }
+
+      // 5. Environmental factors
+      target = target * speedFactor + windForce * 0.3;
+
+      // Hedges logic (keep existing)
+      // Hedges logic
+      if (useHedges) {
+        for (const hx of HEDGES_X) {
+          const d = hx - h.x;
+          const arcOver = (now - jumpStart[i]) > JUMP_DUR;
+
+          // Auto-jump logic
+          if (d > 0 && d < 120 && arcOver) {
+            // Trigger jump
+            if (d < 90) {
+              jumpStart[i] = now;
+              // Dust for jump
+              for (let k = 0; k < 12; k++) addParticle(h.x + 30, h.laneY + 70, '#5e3e29', 15, 0.6);
+            }
+          }
+        }
+      }
+
+      // Smooth momentum change
+      m.momentum = lerp(m.momentum, target, 2.0 * dt); // constant acc/dec
+
+      // Cap max speed
+      const maxSpeed = vmaxForDistance() * 1.3;
+      const vx = clamp(m.momentum, 50, maxSpeed);
+
+      h.x += vx * dt;
+
+      // Dust particles based on speed
+      if (vx > 110 && Math.random() < 0.4) {
+        addParticle(h.x, h.laneY + 75, '#6b8c42', vx * 0.5, 0.3);
+      }
+
+      if (h.x >= FINISH_X && finishTimes[i] == null) {
+        finishTimes[i] = now - startTime;
+        shake = 10;
+        for (let k = 0; k < 60; k++) addParticle(h.x, h.laneY, pick(COLORS), rand(-60, 60), 2.5);
+      }
+    }
+
+    /* Speed Lines Effect */
+    function drawSpeedLines(now) {
+      if (gameState !== STATE.RACING) return;
+      const speed = 10;
+      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+      ctx.lineWidth = 2;
+      const count = 10;
+      for (let i = 0; i < count; i++) {
+        const x = (now * speed + i * 200) % W;
+        const y = (i * 50 + now * 0.1) % H;
+        const len = rand(50, 150);
+        const xPos = W - x; // Move left
+        ctx.beginPath();
+        ctx.moveTo(xPos, y);
+        ctx.lineTo(xPos - len, y);
+        ctx.stroke();
+      }
+    }
+
+    /* ========================== Main loop =========================== */
+    function tick(now) {
+      requestAnimationFrame(tick);
+      if (!lastTs) lastTs = now;
+      const dt = (now - lastTs) / 1000; lastTs = now;
+
+      if (gameState === STATE.RACING) {
+        const order = ranksByX();
+        const leaderIdx = order[0];
+        if (leaderIdx !== currentLeader) {
+          currentLeader = leaderIdx;
+          leaderSince = now;
+          commentary = `${horses[leaderIdx].name} takes the lead!`;
+          commentaryTs = now;
+        }
+
+        let fallMsg = false;
+        for (let i = 0; i < NUM_HORSES; i++) {
+          const before = horses[i].x;
+          advanceHorse(i, dt, now, order);
+          if (fallen[i] && before !== horses[i].x) { fallMsg = true; commentary = `Oh no! ${horses[i].name} stumbled!`; commentaryTs = now; }
+        }
+
+        if (now - commentaryTs > commentaryInterval && !fallMsg) {
+          commentary = randomComment();
+          commentaryTs = now;
+        }
+        milestoneCalls();
+        comEl.textContent = commentary;
+
+        const leadX = Math.max(...horses.map(h => h.x));
+        // Camera should show more of shorter races, less of longer ones
+        const viewAhead = W * lerp(0.45, 0.65, clamp((raceFurlongs - 5) / (18 - 5), 0, 1));
+        const maxCam = Math.max(0, FINISH_X - viewAhead);
+        camX = lerp(camX, Math.min(maxCam, Math.max(0, leadX - 240)), 0.09);
+
+        const allDone = horses.every((_, i) => fallen[i] || finishTimes[i] != null);
+        if (allDone) { gameState = STATE.FINISHED; showResults(now); }
+      }
+
+      if (shake > 0) {
+        const s = shake;
+        ctx.save();
+        ctx.translate(rand(-s, s), rand(-s, s));
+        shake = shake * 0.9 - 0.1;
+        if (shake < 0) shake = 0;
+      }
+
+      clearAndTileGrass();
+      drawLaneMarkers();
+      drawFenceAt(34);
+      drawFenceAt(H - 34);
+
+      // Background particles (clouds?) - simplified
+      if (gameState === STATE.RACING) drawSpeedLines(now);
+
+      drawCheckeredLine(START_X, 'START');
+      drawCheckeredLine(FINISH_X, 'FINISH');
+      drawVerticalHedges();
+
+      // Draw particles (below horses)
+      updateAndDrawParticles(dt);
+
+      for (let i = 0; i < NUM_HORSES; i++) drawHorse(horses[i], i, now);
+
+      drawMinimap();
+      if (weather.includes('Rain')) drawRain(now);
+
+      if (shake > 0) ctx.restore();
+    }
+
+    function updateAndDrawParticles(dt) {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.life -= dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 20 * dt; // gravity
+
+        if (p.life <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+
+        ctx.globalAlpha = p.life / p.maxLife;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x - camX, p.y, 2 + (p.life * 2), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1.0;
+    }
+
+    function drawRain(now) {
+      const n = Math.floor(W * 0.32);
+      ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = 1;
+      for (let i = 0; i < n; i++) {
+        const x = (i * 19 + (now * 0.25)) % W; const y = (i * 31 + (now * 0.6)) % H;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 2, y + 8); ctx.stroke();
+      }
+    }
+
+    function showResults(now) {
+      flashEl.style.transition = 'none';
+      flashEl.style.opacity = 0.9;
+      requestAnimationFrame(() => { flashEl.style.transition = 'opacity 600ms ease'; flashEl.style.opacity = 0; });
+
+      const finishers = horses.map((h, i) => ({ i, t: finishTimes[i] })).filter(o => o.t != null).sort((a, b) => a.t - b.t);
+      const fallers = horses.map((h, i) => ({ i })).filter(o => fallen[o.i]);
+      const order = [...finishers.map(o => o.i), ...fallers.map(o => o.i)];
+      const first = finishers[0]?.i;
+      bannerTitle.textContent = first != null ? `Winner: ${horses[first].name}` : 'No horse finished!';
+      bannerGrid.innerHTML = '';
+      order.forEach((idx, rank) => {
+        const place = ['1st', '2nd', '3rd', '4th', '5th'][rank] || `${rank + 1}th`;
+        const left = document.createElement('div');
+        left.innerHTML = `<span class="dot" style="background:${horses[idx].color}"></span> ${place}`;
+        const right = document.createElement('div');
+        right.textContent = horses[idx].name + (fallen[idx] ? ' — Fell' : '');
+        bannerGrid.appendChild(left); bannerGrid.appendChild(right);
+      });
+      if (players.length) {
+        const winners = players.filter(p => p.horse === first).map(p => p.name);
+        playersResultEl.textContent = winners.length ? `🏆 Player win: ${winners.join(', ')}!` : `No player picked the winner.`;
+      } else if (playerPick != null) {
+        playersResultEl.textContent = (first === playerPick) ? `🏆 You picked ${horses[playerPick].name} — winner!` : `You picked ${horses[playerPick].name}. Better luck next time.`;
+      } else playersResultEl.textContent = '';
+      banner.style.display = 'block';
+    }
+
+    /* ========================= Controls/UI ========================= */
+    window.addEventListener('keydown', (e) => {
+      if (e.key === ' ') {
+        if (gameState === STATE.WAIT) startRace();
+        else if (gameState === STATE.FINISHED) instantReplay();
+      }
+      if (e.key === 'f' || e.key === 'F') { useHedges = false; rollRaceTypeAndDistance(false); freshRaceMeta(); buildHedges(); }
+      if (e.key === 'h' || e.key === 'H') { useHedges = true; rollRaceTypeAndDistance(false); freshRaceMeta(); buildHedges(); }
+      if ([STATE.PICK, STATE.BOARD, STATE.WAIT].includes(gameState)) {
+        const n = parseInt(e.key, 10); if (n >= 1 && n <= NUM_HORSES) chooseHorse(n - 1);
+      }
+    });
+    document.getElementById('btnFlat').onclick = () => { useHedges = false; rollRaceTypeAndDistance(false); freshRaceMeta(); };
+    document.getElementById('btnHedges').onclick = () => { useHedges = true; rollRaceTypeAndDistance(false); freshRaceMeta(); };
+    document.getElementById('btnContinue').onclick = () => { gameState = STATE.PICK; commentary = 'Pick a horse (1–5) or click a row.'; comEl.textContent = commentary; };
+
+    document.getElementById('btnRestartFull').onclick = resetAllToSetup;
+    document.getElementById('btnInstantReplay').onclick = instantReplay;
+    document.getElementById('btnPlayAgain').onclick = instantReplay;
+    document.getElementById('btnChangeCard').onclick = () => { makeCard(); seedHorses(); gameState = STATE.PICK; banner.style.display = 'none'; comEl.textContent = 'New card — pick a horse.'; };
+    btnStart.onclick = startRace;
+
+    document.getElementById('btnAddPlayer').onclick = () => {
+      const name = (playerNameInp.value || '').trim();
+      const horse = parseInt(playerHorseSel.value, 10);
+      if (!name) return alert('Enter a player name');
+      if (players.length >= NUM_HORSES) return alert('Max players reached for this race.');
+      if (players.some(p => p.horse === horse)) return alert('That horse is already taken.');
+      players.push({ name, horse });
+      playerNameInp.value = '';
+      renderPlayersUI(); rebuildHorseSelect();
+      gameState = STATE.WAIT; btnStart.style.display = 'inline-block';
+      comEl.textContent = 'Players ready. Press Space or Start.';
+    };
+
+    document.getElementById('btnQuickStart').onclick = () => {
+      startModal.style.display = 'none';
+      rollRaceTypeAndDistance(true);     // randomize type + distance
+      setWeatherRandom();                 // randomize weather
+      freshRaceMeta(); seedHorses();
+      if (players.length > 0) { gameState = STATE.WAIT; btnStart.style.display = 'inline-block'; comEl.textContent = 'Players ready. Press Space or Start.'; }
+      else { gameState = STATE.PICK; comEl.textContent = 'Pick a horse by clicking a row or pressing 1–5.'; }
+    };
+
+    /* ============================ Boot ============================= */
+    canvas = document.getElementById('game'); ctx = canvas.getContext('2d'); resize();
+    window.addEventListener('resize', resize);
+    rollRaceTypeAndDistance(true); // sets distance & type + builds hedges
+    setWeatherRandom();            // sets weather & updates chips/card
+    makeCard(); freshRaceMeta(); seedHorses(); renderPlayersUI();
+    requestAnimationFrame(tick);
+  </script>
+</body>
+
+</html>
