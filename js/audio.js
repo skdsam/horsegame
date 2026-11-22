@@ -104,9 +104,6 @@ export class RaceAudioEngine {
     if (found) {
       this.selectedVoice = found;
       this.selectedVoiceName = found.name;
-      if (this.voiceEnabled) {
-        this.speak(`Race caller switched to ${this.getShortVoiceLabel(found)}.`, true);
-      }
     }
     return this.selectedVoice;
   }
@@ -202,9 +199,6 @@ export class RaceAudioEngine {
 
   setMuted(muted) {
     this.muted = muted;
-    if (this.muted && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
     if (this.crowdGain && this.ctx) {
       this.crowdGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.1);
     }
@@ -225,15 +219,12 @@ export class RaceAudioEngine {
     this.voiceEnabled = !this.voiceEnabled;
     if (!this.voiceEnabled && window.speechSynthesis) {
       window.speechSynthesis.cancel();
-    } else if (this.voiceEnabled) {
-      const label = this.getShortVoiceLabel();
-      this.speak(`Live commentary enabled with ${label.replace(/\[.*\]/, "")}.`, true);
     }
     return this.voiceEnabled;
   }
 
   speak(text, priority = false, excitement = "normal") {
-    if (!this.voiceEnabled || this.muted || !window.speechSynthesis) return;
+    if (!this.voiceEnabled || !window.speechSynthesis) return;
     if (text === this.lastSpokenText && !priority) return;
     this.lastSpokenText = text;
     try {

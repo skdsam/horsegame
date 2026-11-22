@@ -555,9 +555,10 @@
       <div class="chip" id="distanceChip">Distance: …</div>
       <div class="chip" id="weatherTop">Weather: …</div>
       <div style="flex:1"></div>
-      <button class="btn ghost" id="btnCameraMode" title="Cycle 3D Camera Angle (Hotkey: C)">🎥 Cam: TV Broadcast</button>
-      <button class="btn ghost" id="btnAudioMute" title="Toggle Web Audio SFX (Hotkey: M)">🔊 Audio</button>
-      <button class="btn ghost" id="btnVoiceToggle" title="Toggle Live Speech Announcer (Hotkey: V)">🎙️ Caller: OFF</button>
+      <button class="btn ghost" id="btnDurationMode" title="Switch between 5-Minute and 10-Minute Race Duration">⏱️ Duration: 5 Min</button>
+      <button class="btn ghost" id="btnCameraMode" title="Cycle 3D Camera Mode (Hotkey: C)">🎬 Action: TV Wide Tracking</button>
+      <button class="btn ghost" id="btnAudioMute" title="Toggle Sound Effects & Crowd Ambience only (Hotkey: M)">🔊 SFX: ON</button>
+      <button class="btn ghost" id="btnVoiceToggle" title="Toggle Live Speech Announcer independently (Hotkey: V)">🎙️ Caller: OFF</button>
       <select class="btn ghost" id="voiceSelect" title="Choose Windows Natural / Neural Commentator Voice" style="max-width:195px;padding:7px 10px;text-overflow:ellipsis"></select>
       <button class="btn ghost" id="btnTestVoice" title="Preview selected commentator voice" style="padding:7px 10px">▶</button>
       <button class="btn ghost" id="btnDebugDrawer" title="3D Visual Validation & Quality Settings (Hotkey: D)">⚙️ 3D View</button>
@@ -720,8 +721,14 @@ import * as THREE from "three";
 const NUM_HORSES = 9;
 const START_X = 70;
 const FURLONG_CHOICES = [5, 6, 7, 8, 10, 12, 16, 18];
-const PX_PER_FURLONG = 440; // ↑ ~2x longer track distance per furlong so races last longer
-const BASE_FALL_PROB = 0.0022; // scaled to longer race duration so stumble rate stays balanced
+const PX_PER_FURLONG = 3400; // Scaled for 5-minute and 10-minute full-length races
+const BASE_FALL_PROB = 0.00032; // Scaled to 5–10 min race duration so stumbles remain rare & dramatic
+
+/* Selectable Race Duration Targets (300s = 5 Minutes, 600s = 10 Minutes) */
+const DURATION_MODES = [
+  { id: 300, label: "5 Min Race", minutes: 5, seconds: 300 },
+  { id: 600, label: "10 Min Race", minutes: 10, seconds: 600 }
+];
 
 /* Jump feel (tuned so apex of jump aligns squarely over the 3D hedge) */
 const JUMP_DUR = 720; // ms (~15m total horizontal jump span)
@@ -731,7 +738,7 @@ const HEAD_START_MS = 140;
 const LATE_WINDOW = 18;
 
 /* 3D Scale Contract:
- * 1 simulation pixel = 0.2 metres (so 230 px/furlong = 46m compressed 3D furlong)
+ * 1 simulation pixel = 0.2 metres
  * 9 lanes spaced 2.2m apart along Z: -8.8m to +8.8m
  */
 const SIM_TO_M = 0.20;
@@ -772,8 +779,9 @@ const STATE = {
 };
 
 const CAMERA_MODES = [
+  { id: "action", label: "Action Director (Auto-Cut)", icon: "🎬" },
   { id: "broadcast", label: "TV Broadcast", icon: "🎥" },
-  { id: "action", label: "Action Rail", icon: "🎬" },
+  { id: "rail", label: "Low Rail Sweep", icon: "📹" },
   { id: "chase", label: "Jockey Chase", icon: "🏇" },
   { id: "aerial", label: "Helicopter", icon: "🚁" },
   { id: "orbit", label: "Free Orbit", icon: "🌐" }
@@ -970,9 +978,6 @@ class RaceAudioEngine {
     if (found) {
       this.selectedVoice = found;
       this.selectedVoiceName = found.name;
-      if (this.voiceEnabled) {
-        this.speak(`Race caller switched to ${this.getShortVoiceLabel(found)}.`, true);
-      }
     }
     return this.selectedVoice;
   }
@@ -1068,9 +1073,6 @@ class RaceAudioEngine {
 
   setMuted(muted) {
     this.muted = muted;
-    if (this.muted && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
     if (this.crowdGain && this.ctx) {
       this.crowdGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.1);
     }
@@ -1091,15 +1093,12 @@ class RaceAudioEngine {
     this.voiceEnabled = !this.voiceEnabled;
     if (!this.voiceEnabled && window.speechSynthesis) {
       window.speechSynthesis.cancel();
-    } else if (this.voiceEnabled) {
-      const label = this.getShortVoiceLabel();
-      this.speak(`Live commentary enabled with ${label.replace(/\[.*\]/, "")}.`, true);
     }
     return this.voiceEnabled;
   }
 
   speak(text, priority = false, excitement = "normal") {
-    if (!this.voiceEnabled || this.muted || !window.speechSynthesis) return;
+    if (!this.voiceEnabled || !window.speechSynthesis) return;
     if (text === this.lastSpokenText && !priority) return;
     this.lastSpokenText = text;
     try {
@@ -2016,7 +2015,7 @@ class RacecourseBuilder {
   /**
    * Rebuilds the 3D racecourse geometry whenever race distance or Flat/Hedges mode changes.
    */
-  buildCourse({ raceFurlongs, finishSimX, hedgesSimX, useHedges }) {
+  buildCourse({ raceFurlongs, finishSimX, hedgesSimX, useHedges, pxPerFurlong = PX_PER_FURLONG }) {
     // Clear existing children
     while (this.trackGroup.children.length > 0) {
       const child = this.trackGroup.children[0];
@@ -2029,14 +2028,14 @@ class RacecourseBuilder {
     const startM = START_X * SIM_TO_M;
     const finishM = finishSimX * SIM_TO_M;
     const raceLengthM = finishM - startM;
-    const totalCourseLength = finishM + 140;
+    const totalCourseLength = finishM + 160;
     const laneSpan = LANES_Z[LANES_Z.length - 1] - LANES_Z[0];
     const trackWidth = laneSpan + 5.2; // 9 lanes (-8.8..+8.8 = 17.6m) plus turf margins -> 22.8m
     const railHalfWidth = trackWidth * 0.5 + 0.25; // 11.65m
 
     // 1. Main Striped Racecourse Turf Strip
-    this.turfTexture.repeat.set(Math.round(totalCourseLength / 14), 1);
-    const trackGeo = new THREE.PlaneGeometry(totalCourseLength + 80, trackWidth, 64, 8);
+    this.turfTexture.repeat.set(Math.max(20, Math.round(totalCourseLength / 14)), 1);
+    const trackGeo = new THREE.PlaneGeometry(totalCourseLength + 120, trackWidth, 64, 8);
     trackGeo.rotateX(-Math.PI / 2);
     const trackMesh = new THREE.Mesh(trackGeo, this.turfMaterial);
     trackMesh.position.set(totalCourseLength * 0.5 - 20, 0, 0);
@@ -2044,7 +2043,7 @@ class RacecourseBuilder {
     this.trackGroup.add(trackMesh);
 
     // 2. Surrounding Infield & Paddock Ground Plane
-    const surroundGeo = new THREE.PlaneGeometry(totalCourseLength + 900, 420);
+    const surroundGeo = new THREE.PlaneGeometry(totalCourseLength + 1200, 520);
     surroundGeo.rotateX(-Math.PI / 2);
     const surroundMesh = new THREE.Mesh(surroundGeo, this.infieldMaterial);
     surroundMesh.position.set(totalCourseLength * 0.5, -0.03, 0);
@@ -2092,7 +2091,7 @@ class RacecourseBuilder {
     this._buildFinishGantry(finishM, trackWidth);
 
     // 8. Furlong Distance Marker Poles along the inner rail
-    this._buildFurlongMarkers(startM, finishM, raceFurlongs, railHalfWidth);
+    this._buildFurlongMarkers(startM, finishM, raceFurlongs, railHalfWidth, pxPerFurlong);
 
     // 9. 3D Steeplechase Hedges (when useHedges === true)
     if (useHedges && hedgesSimX.length > 0) {
@@ -2117,8 +2116,8 @@ class RacecourseBuilder {
       this.trackGroup.add(topRail);
     });
 
-    // Instanced vertical fence posts every 3.5 metres
-    const postSpacing = 3.5;
+    // Instanced vertical fence posts (capped at 1400 per side for GPU efficiency on 10-min tracks)
+    const postSpacing = Math.max(4.0, railLen / 1200);
     const postsPerSide = Math.floor(railLen / postSpacing);
     const postGeo = new THREE.BoxGeometry(0.11, 1.15, 0.11);
     const postInst = new THREE.InstancedMesh(postGeo, this.railMaterial, postsPerSide * 2);
@@ -2261,7 +2260,7 @@ class RacecourseBuilder {
     this.trackGroup.add(gantry);
   }
 
-  _buildFurlongMarkers(startM, finishM, raceFurlongs, railHalfWidth = 11.65) {
+  _buildFurlongMarkers(startM, finishM, raceFurlongs, railHalfWidth = 11.65, pxPerFurlong = PX_PER_FURLONG) {
     const poleGeo = new THREE.CylinderGeometry(0.05, 0.05, 1.9, 8);
     const flagGeo = new THREE.PlaneGeometry(0.75, 0.42, 4, 1);
     flagGeo.translate(0.375, 0, 0);
@@ -2269,7 +2268,7 @@ class RacecourseBuilder {
 
     for (let f = 1; f < raceFurlongs; f++) {
       const distFromFinishFurlongs = raceFurlongs - f;
-      const xPos = startM + f * PX_PER_FURLONG * SIM_TO_M;
+      const xPos = startM + f * pxPerFurlong * SIM_TO_M;
       if (xPos >= finishM - 4) continue;
 
       const pole = new THREE.Mesh(poleGeo, this.railMaterial);
@@ -2398,7 +2397,7 @@ class RacecourseBuilder {
 
   _buildVegetation(totalCourseLength, railHalfWidth = 11.65) {
     // 1. Instanced Perimeter Trees along the infield & backdrop
-    const treeCount = Math.min(180, Math.max(50, Math.floor(totalCourseLength / 10)));
+    const treeCount = Math.min(340, Math.max(80, Math.floor(totalCourseLength / 18)));
     const trunkGeo = new THREE.CylinderGeometry(0.22, 0.34, 2.2, 7);
     const trunkMat = new THREE.MeshStandardMaterial({ color: "#4a321f", roughness: 0.9 });
     const crownGeo = new THREE.DodecahedronGeometry(1.75, 1);
@@ -2898,18 +2897,28 @@ class VFXSystem3D {
 
 /* --- MODULE: camera3d.js --- */
 /* ============================================================================
- * Horse Rally 3D — Multi-Mode Broadcast Camera Rig & Trauma Shake
+ * Horse Rally 3D — Multi-Mode Broadcast Camera Rig, Auto-Cut Action Director & Trauma Shake
  * Skills: threejs-camera-direction, build-game-camera-controls
  * ============================================================================ */
 
+
+const ACTION_SHOTS = [
+  { id: "broadcast_wide", label: "TV Wide Tracking", minDur: 7, maxDur: 11 },
+  { id: "rail_low", label: "Low Rail Sweep", minDur: 5, maxDur: 8 },
+  { id: "head_on", label: "Head-On Telephoto", minDur: 5, maxDur: 7 },
+  { id: "jockey_chase", label: "Jockey Silk Cam", minDur: 6, maxDur: 9 },
+  { id: "infield_reverse", label: "Infield Tracking", minDur: 5, maxDur: 8 },
+  { id: "helicopter", label: "Helicopter Overhead", minDur: 6, maxDur: 9 },
+  { id: "pack_duel", label: "Pack Battle Close-Up", minDur: 5, maxDur: 8 }
+];
 
 class CameraDirector3D {
   constructor(camera, domElement) {
     this.camera = camera;
     this.domElement = domElement;
 
-    this.modeIndex = 0; // 0 = broadcast, 1 = action, 2 = chase, 3 = aerial, 4 = orbit
-    this.currentPos = new THREE.Vector3(10, 6.5, 18);
+    this.modeIndex = 0; // 0 = action (Auto-Cut Action Director default), 1 = broadcast, 2 = rail, 3 = chase, 4 = aerial, 5 = orbit
+    this.currentPos = new THREE.Vector3(10, 6.5, 20);
     this.currentLookAt = new THREE.Vector3(14, 1.3, 0);
     this.desiredPos = new THREE.Vector3();
     this.desiredLookAt = new THREE.Vector3();
@@ -2917,10 +2926,16 @@ class CameraDirector3D {
     this.trauma = 0;
     this.reducedMotion = false;
 
+    // Action Director Auto-Cut state
+    this.actionShotIndex = 0;
+    this.actionShotTimer = 8.0;
+    this.actionFocusHorse = 0;
+    this.justCut = false;
+
     // Free Orbit user controls state
     this.orbitYaw = 0.35;
     this.orbitPitch = 0.32;
-    this.orbitDistance = 16.5;
+    this.orbitDistance = 18.5;
     this.isPointerDown = false;
     this.lastPointer = { x: 0, y: 0 };
 
@@ -2932,7 +2947,15 @@ class CameraDirector3D {
   }
 
   get modeInfo() {
-    return CAMERA_MODES[this.modeIndex];
+    const base = CAMERA_MODES[this.modeIndex];
+    if (base.id === "action") {
+      const shot = ACTION_SHOTS[this.actionShotIndex] || ACTION_SHOTS[0];
+      return {
+        ...base,
+        subLabel: shot.label
+      };
+    }
+    return base;
   }
 
   setModeById(id) {
@@ -2943,7 +2966,23 @@ class CameraDirector3D {
 
   cycleMode() {
     this.modeIndex = (this.modeIndex + 1) % CAMERA_MODES.length;
+    if (this.mode === "action") {
+      this._pickNextActionShot(9);
+    }
     return this.modeInfo;
+  }
+
+  _pickNextActionShot(numHorses = 9) {
+    // Pick a different shot from the current one for visual variety
+    let next = Math.floor(Math.random() * ACTION_SHOTS.length);
+    if (next === this.actionShotIndex) {
+      next = (next + 1) % ACTION_SHOTS.length;
+    }
+    this.actionShotIndex = next;
+    const shot = ACTION_SHOTS[next];
+    this.actionShotTimer = shot.minDur + Math.random() * (shot.maxDur - shot.minDur);
+    this.actionFocusHorse = Math.floor(Math.random() * numHorses);
+    this.justCut = true;
   }
 
   addTrauma(amount) {
@@ -2976,7 +3015,7 @@ class CameraDirector3D {
     });
 
     this.domElement.addEventListener("wheel", e => {
-      this.orbitDistance = clamp(this.orbitDistance + e.deltaY * 0.014, 6.5, 42);
+      this.orbitDistance = clamp(this.orbitDistance + e.deltaY * 0.014, 6.5, 48);
     }, { passive: true });
   }
 
@@ -2988,6 +3027,7 @@ class CameraDirector3D {
       gameState,
       horses,
       leaderIdx,
+      secondIdx,
       playerPick,
       finishSimX,
       raceFurlongs,
@@ -3000,8 +3040,13 @@ class CameraDirector3D {
     // Determine authoritative subject X & Z
     const leadHorse = horses[leaderIdx >= 0 ? leaderIdx : 0] || { x: START_X };
     const leadX = leadHorse.x * SIM_TO_M;
+    const leadZ = LANES_Z[leaderIdx >= 0 ? leaderIdx : 0] || 0;
 
-    const focusIdx = (playerPick != null && horses[playerPick]) ? playerPick : (leaderIdx >= 0 ? leaderIdx : 2);
+    const runnerUpHorse = horses[secondIdx >= 0 ? secondIdx : 1] || leadHorse;
+    const runnerUpX = runnerUpHorse.x * SIM_TO_M;
+    const runnerUpZ = LANES_Z[secondIdx >= 0 ? secondIdx : 1] || 0;
+
+    const focusIdx = (playerPick != null && horses[playerPick]) ? playerPick : (leaderIdx >= 0 ? leaderIdx : 4);
     const focusHorse = horses[focusIdx] || leadHorse;
     const focusX = focusHorse.x * SIM_TO_M;
     const focusZ = LANES_Z[focusIdx] || 0;
@@ -3025,17 +3070,61 @@ class CameraDirector3D {
       // Racing or Finished camera modes
       const progress = clamp((leadX - startM) / Math.max(1, finishM - startM), 0, 1);
 
-      // Automatic dramatic finish-line angle in the final 3% unless user is in Chase or Orbit
-      if (progress > 0.965 && (this.mode === "broadcast" || this.mode === "action")) {
+      // Automatic dramatic finish-line angle in the final 2% unless user is in Chase or Orbit
+      if (progress > 0.98 && (this.mode === "action" || this.mode === "broadcast" || this.mode === "rail")) {
         this.desiredPos.set(finishM + 8.5, 3.2, 14.5);
         this.desiredLookAt.set(leadX, 1.35, 0);
+      } else if (this.mode === "action") {
+        // Dynamic Action Director: automatically rotates through 7 cinematic camera shots during the race
+        this.actionShotTimer -= dt;
+        if (this.actionShotTimer <= 0) {
+          this._pickNextActionShot(horses.length);
+        }
+
+        const shotId = ACTION_SHOTS[this.actionShotIndex]?.id || "broadcast_wide";
+        const drift = Math.sin(nowSec * 0.6);
+
+        if (shotId === "broadcast_wide") {
+          // Classic elevated TV broadcast tracking dolly
+          const distFactor = clamp((raceFurlongs - 5) / (18 - 5), 0, 1);
+          const leadAhead = lerp(3.2, 5.8, distFactor);
+          this.desiredPos.set(leadX + leadAhead - 4.2, 6.4, 20.5);
+          this.desiredLookAt.set(leadX + leadAhead * 0.45, 1.25, -0.5);
+        } else if (shotId === "rail_low") {
+          // Low-angle dramatic south rail sweep looking slightly back into the thundering hooves
+          this.desiredPos.set(leadX + 5.5 + drift * 1.5, 1.75, 13.8);
+          this.desiredLookAt.set(leadX - 1.2, 1.3, leadZ * 0.4);
+        } else if (shotId === "head_on") {
+          // Dramatic head-on front tracking shot down the center of the course
+          this.desiredPos.set(leadX + 16.5, 2.55, drift * 3.5);
+          this.desiredLookAt.set(leadX - 2.0, 1.35, leadZ * 0.3);
+        } else if (shotId === "jockey_chase") {
+          // Over-the-shoulder jockey silk chase cam behind player's horse or leader
+          this.desiredPos.set(focusX - 5.2, 2.75, focusZ + 0.75);
+          this.desiredLookAt.set(focusX + 9.0, 1.35, focusZ);
+        } else if (shotId === "infield_reverse") {
+          // North infield rail tracking shot with opposite perspective
+          this.desiredPos.set(leadX + 2.5, 3.1, -15.5);
+          this.desiredLookAt.set(leadX - 0.5, 1.3, leadZ * 0.3);
+        } else if (shotId === "helicopter") {
+          // High sweeping helicopter drone shot circling slightly above the pack
+          this.desiredPos.set(leadX - 5.0 + drift * 4.0, 22.5, 13.5 + Math.cos(nowSec * 0.4) * 4.0);
+          this.desiredLookAt.set(leadX + 2.5, 0.8, 0);
+        } else if (shotId === "pack_duel") {
+          // Tight side-by-side duel shot framing 1st and 2nd place battle
+          const midX = (leadX + runnerUpX) * 0.5;
+          const midZ = (leadZ + runnerUpZ) * 0.5;
+          const sideZ = midZ >= 0 ? 14.5 : -14.5;
+          this.desiredPos.set(midX + 1.5, 2.4, sideZ);
+          this.desiredLookAt.set(midX, 1.35, midZ * 0.5);
+        }
       } else if (this.mode === "broadcast") {
         // Elevated rail-side tracking dolly framing all 9 lanes
         const distFactor = clamp((raceFurlongs - 5) / (18 - 5), 0, 1);
         const leadAhead = lerp(3.2, 5.8, distFactor);
         this.desiredPos.set(leadX + leadAhead - 4.2, 6.4, 20.5);
         this.desiredLookAt.set(leadX + leadAhead * 0.45, 1.25, -0.5);
-      } else if (this.mode === "action") {
+      } else if (this.mode === "rail") {
         // Low-angle dramatic rail-side sweeping shot
         this.desiredPos.set(leadX + 4.2, 2.35, 14.2);
         this.desiredLookAt.set(leadX - 0.5, 1.35, focusZ * 0.35);
@@ -3053,11 +3142,17 @@ class CameraDirector3D {
       }
     }
 
-    // Frame-rate-independent damped convergence
-    const posAlpha = 1 - Math.exp(-dt * 6.5);
-    const lookAlpha = 1 - Math.exp(-dt * 9.0);
-    this.currentPos.lerp(this.desiredPos, posAlpha);
-    this.currentLookAt.lerp(this.desiredLookAt, lookAlpha);
+    // Crisp broadcast cut or smooth damped follow
+    if (this.justCut && !this.reducedMotion) {
+      this.justCut = false;
+      this.currentPos.lerp(this.desiredPos, 0.65);
+      this.currentLookAt.lerp(this.desiredLookAt, 0.75);
+    } else {
+      const posAlpha = 1 - Math.exp(-dt * 6.5);
+      const lookAlpha = 1 - Math.exp(-dt * 9.0);
+      this.currentPos.lerp(this.desiredPos, posAlpha);
+      this.currentLookAt.lerp(this.desiredLookAt, lookAlpha);
+    }
 
     // Apply trauma shake as a temporary modifier layered over the base camera
     let shakeX = 0, shakeY = 0, shakeZ = 0;
@@ -3278,15 +3373,17 @@ let speedFactor = 1;
 let windForce = 0;
 let fallProb = BASE_FALL_PROB;
 
+let targetRaceMinutes = 5; // 5-minute or 10-minute race mode
 let raceFurlongs = 12;
-let RACE_DISTANCE = raceFurlongs * PX_PER_FURLONG;
+let currentPxPerFurlong = PX_PER_FURLONG;
+let RACE_DISTANCE = raceFurlongs * currentPxPerFurlong;
 let FINISH_X = START_X + RACE_DISTANCE;
 let HEDGES_X = [];
 
 let startTime = 0;
 let lastTs = 0;
 let commentaryTs = 0;
-const commentaryInterval = 2400; // Paced for longer races & full spoken sentences
+const commentaryInterval = 4200; // Paced for 5–10 minute races
 let commentary = "";
 
 let horses = [];
@@ -3334,6 +3431,7 @@ const raceCard = document.getElementById("raceCard");
 const panelBoard = document.getElementById("panelBoard");
 const btnToggleBoard = document.getElementById("btnToggleBoard");
 const btnCameraMode = document.getElementById("btnCameraMode");
+const btnDurationMode = document.getElementById("btnDurationMode");
 const btnAudioMute = document.getElementById("btnAudioMute");
 const btnVoiceToggle = document.getElementById("btnVoiceToggle");
 const voiceSelect = document.getElementById("voiceSelect");
@@ -3344,14 +3442,27 @@ const telemetryEl = document.getElementById("telemetryStats");
 const seedInput = document.getElementById("seedInput");
 
 /* ============================ Course & Card Setup ============================= */
+function computeDistanceForDuration() {
+  // Average horse cruising velocity is ~110 sim px/s.
+  // Scale track length so the race lasts ~5 minutes (300s) or ~10 minutes (600s)
+  const targetSeconds = targetRaceMinutes * 60;
+  const avgSpeedPxPerSec = 108;
+  RACE_DISTANCE = Math.round(targetSeconds * avgSpeedPxPerSec);
+  currentPxPerFurlong = RACE_DISTANCE / raceFurlongs;
+  FINISH_X = START_X + RACE_DISTANCE;
+  // Scale stumble probability inversely with duration so stumbles remain dramatic & balanced
+  fallProb = (BASE_FALL_PROB * 300) / targetSeconds;
+}
+
 function buildHedges() {
   HEDGES_X = [];
   if (!useHedges) return;
-  const n = Math.max(3, Math.round(raceFurlongs / 2)); // 5f→3, 12f→6, 18f→9
+  // Space hedges steadily down the 5-min or 10-min course (~3 hedges per minute of racing)
+  const n = Math.max(12, targetRaceMinutes * 3);
   for (let i = 0; i < n; i++) {
-    const t = 0.20 + (0.72 * (i + 1) / (n + 1));
+    const t = 0.08 + (0.86 * (i + 1) / (n + 1));
     const x = Math.round(START_X + t * RACE_DISTANCE);
-    if (x < FINISH_X - 32) HEDGES_X.push(x);
+    if (x < FINISH_X - 60) HEDGES_X.push(x);
   }
 }
 
@@ -3361,7 +3472,8 @@ function sync3DCourseAndWeather() {
     raceFurlongs,
     finishSimX: FINISH_X,
     hedgesSimX: HEDGES_X,
-    useHedges
+    useHedges,
+    pxPerFurlong: currentPxPerFurlong
   });
   scene3d.weatherSystem.applyWeatherEnvelope(weather, windForce, {
     sunLight: scene3d.sunLight,
@@ -3372,19 +3484,22 @@ function sync3DCourseAndWeather() {
 }
 
 function rollRaceTypeAndDistance(randomizeType = true) {
-  if (randomizeType) useHedges = random() < 0.5;
+  if (randomizeType) {
+    useHedges = random() < 0.5;
+    raceFurlongs = pick(FURLONG_CHOICES);
+  }
 
-  raceFurlongs = pick(FURLONG_CHOICES);
-  RACE_DISTANCE = raceFurlongs * PX_PER_FURLONG;
-  FINISH_X = START_X + RACE_DISTANCE;
-
+  computeDistanceForDuration();
   buildHedges();
 
   raceTypeChip.textContent = `Race: ${useHedges ? "Hedges" : "Flat"}`;
-  distanceChip.textContent = `Distance: ${raceFurlongs}f`;
+  distanceChip.textContent = `Distance: ${raceFurlongs}f (${targetRaceMinutes} Min)`;
+  if (btnDurationMode) {
+    btnDurationMode.textContent = `⏱️ Duration: ${targetRaceMinutes} Min`;
+  }
 
   const typeTxt = `${RACE_ICONS[useHedges ? "Hedges" : "Flat"]} ${useHedges ? "Hedges (Steeplechase)" : "Flat Turf"}`;
-  const distTxt = `📏 ${raceFurlongs} Furlongs`;
+  const distTxt = `📏 ${raceFurlongs} Furlongs (${targetRaceMinutes} Min Race)`;
   const w = weather || "Clear";
   const wTxt = `${WEATHER_ICONS[w] ?? ""} ${w}`;
   raceCard.innerHTML = `
@@ -3576,11 +3691,12 @@ function chooseHorse(i) {
 function setWeatherRandom() {
   const w = pick(["Clear", "Rain", "Wind", "Rain & Wind"]);
   weather = w;
+  const baseFall = (BASE_FALL_PROB * 300) / (targetRaceMinutes * 60);
 
-  if (w === "Clear") { fallProb = BASE_FALL_PROB; speedFactor = 1; windForce = 0; }
-  if (w === "Rain") { fallProb = BASE_FALL_PROB * 1.5; speedFactor = 0.9; windForce = 0; }
-  if (w === "Wind") { fallProb = BASE_FALL_PROB; speedFactor = 1; windForce = rand(-5, 5); }
-  if (w === "Rain & Wind") { fallProb = BASE_FALL_PROB * 1.5; speedFactor = 0.85; windForce = rand(-5, 5); }
+  if (w === "Clear") { fallProb = baseFall; speedFactor = 1; windForce = 0; }
+  if (w === "Rain") { fallProb = baseFall * 1.5; speedFactor = 0.94; windForce = 0; }
+  if (w === "Wind") { fallProb = baseFall; speedFactor = 1; windForce = rand(-5, 5); }
+  if (w === "Rain & Wind") { fallProb = baseFall * 1.5; speedFactor = 0.90; windForce = rand(-5, 5); }
 
   const icon = WEATHER_ICONS[w] ?? "";
   weatherChip.textContent = `Weather: ${icon} ${w}`;
@@ -3731,8 +3847,8 @@ function rankOf(i, order) {
   return order.indexOf(i) + 1;
 }
 function vmaxForDistance() {
-  const t = clamp((raceFurlongs - 5) / (18 - 5), 0, 1);
-  return Math.round(lerp(132, 84, t));
+  // Keep steady cruising velocity cap so race completes right around the 5-min or 10-min mark
+  return 118;
 }
 
 /* ========================== Simulation Dynamics =========================== */
@@ -4068,16 +4184,19 @@ function tick(now) {
   // Update Camera Director, Sun Shadow Frustum, Weather & Vegetation Wind
   const leadWorldX = (horses[leaderIdx]?.x || START_X) * SIM_TO_M;
   const raceProgress = clamp(((horses[leaderIdx]?.x || START_X) - START_X) / Math.max(1, RACE_DISTANCE), 0, 1);
+  const secondIdx = order[1] ?? 0;
 
   scene3d.cameraDirector.update(rawDt, {
     gameState,
     horses,
     leaderIdx,
+    secondIdx,
     playerPick,
     finishSimX: FINISH_X,
     raceFurlongs,
     nowSec
   });
+  updateCameraButtonLabel();
 
   scene3d.updateSunFollow(leadWorldX);
   scene3d.course.updateVegetationWind(nowSec, windForce);
@@ -4099,7 +4218,19 @@ function tick(now) {
 function updateCameraButtonLabel() {
   if (!btnCameraMode || !scene3d) return;
   const info = scene3d.cameraDirector.modeInfo;
-  btnCameraMode.textContent = `${info.icon} Cam: ${info.label}`;
+  const label = info.subLabel ? `${info.icon} Action: ${info.subLabel}` : `${info.icon} Cam: ${info.label}`;
+  if (btnCameraMode.textContent !== label) {
+    btnCameraMode.textContent = label;
+  }
+}
+
+function toggleRaceDuration() {
+  targetRaceMinutes = targetRaceMinutes === 5 ? 10 : 5;
+  rollRaceTypeAndDistance(false);
+  freshRaceMeta();
+  if (gameState !== STATE.RACING) {
+    seedHorses(baseCard);
+  }
 }
 
 window.addEventListener("keydown", (e) => {
@@ -4126,7 +4257,7 @@ window.addEventListener("keydown", (e) => {
   }
   if (e.key === "m" || e.key === "M") {
     const muted = audio.toggleMute();
-    btnAudioMute.textContent = muted ? "🔇 Muted" : "🔊 Audio";
+    btnAudioMute.textContent = muted ? "🔇 SFX: OFF" : "🔊 SFX: ON";
   }
   if (e.key === "v" || e.key === "V") {
     const voice = audio.toggleVoice();
@@ -4185,10 +4316,16 @@ if (btnCameraMode) {
   };
 }
 
+if (btnDurationMode) {
+  btnDurationMode.onclick = () => {
+    toggleRaceDuration();
+  };
+}
+
 if (btnAudioMute) {
   btnAudioMute.onclick = () => {
     const muted = audio.toggleMute();
-    btnAudioMute.textContent = muted ? "🔇 Muted" : "🔊 Audio";
+    btnAudioMute.textContent = muted ? "🔇 SFX: OFF" : "🔊 SFX: ON";
   };
 }
 

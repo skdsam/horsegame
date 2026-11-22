@@ -7,12 +7,13 @@ import {
   BASE_FALL_PROB,
   CAMERA_MODES,
   COLORS,
+  DURATION_MODES,
   FURLONG_CHOICES,
   HORSE_NAMES,
   JOCKEYS,
   JUMP_DUR,
   LANES_Y_2D,
-   LANES_Z,
+  LANES_Z,
   LAST_TMPL,
   NUM_HORSES,
   OWNERS,
@@ -46,15 +47,17 @@ let speedFactor = 1;
 let windForce = 0;
 let fallProb = BASE_FALL_PROB;
 
+let targetRaceMinutes = 5; // 5-minute or 10-minute race mode
 let raceFurlongs = 12;
-let RACE_DISTANCE = raceFurlongs * PX_PER_FURLONG;
+let currentPxPerFurlong = PX_PER_FURLONG;
+let RACE_DISTANCE = raceFurlongs * currentPxPerFurlong;
 let FINISH_X = START_X + RACE_DISTANCE;
 let HEDGES_X = [];
 
 let startTime = 0;
 let lastTs = 0;
 let commentaryTs = 0;
-const commentaryInterval = 2400; // Paced for longer races & full spoken sentences
+const commentaryInterval = 4200; // Paced for 5–10 minute races
 let commentary = "";
 
 let horses = [];
@@ -102,6 +105,7 @@ const raceCard = document.getElementById("raceCard");
 const panelBoard = document.getElementById("panelBoard");
 const btnToggleBoard = document.getElementById("btnToggleBoard");
 const btnCameraMode = document.getElementById("btnCameraMode");
+const btnDurationMode = document.getElementById("btnDurationMode");
 const btnAudioMute = document.getElementById("btnAudioMute");
 const btnVoiceToggle = document.getElementById("btnVoiceToggle");
 const voiceSelect = document.getElementById("voiceSelect");
@@ -112,14 +116,27 @@ const telemetryEl = document.getElementById("telemetryStats");
 const seedInput = document.getElementById("seedInput");
 
 /* ============================ Course & Card Setup ============================= */
+function computeDistanceForDuration() {
+  // Average horse cruising velocity is ~110 sim px/s.
+  // Scale track length so the race lasts ~5 minutes (300s) or ~10 minutes (600s)
+  const targetSeconds = targetRaceMinutes * 60;
+  const avgSpeedPxPerSec = 108;
+  RACE_DISTANCE = Math.round(targetSeconds * avgSpeedPxPerSec);
+  currentPxPerFurlong = RACE_DISTANCE / raceFurlongs;
+  FINISH_X = START_X + RACE_DISTANCE;
+  // Scale stumble probability inversely with duration so stumbles remain dramatic & balanced
+  fallProb = (BASE_FALL_PROB * 300) / targetSeconds;
+}
+
 function buildHedges() {
   HEDGES_X = [];
   if (!useHedges) return;
-  const n = Math.max(3, Math.round(raceFurlongs / 2)); // 5f→3, 12f→6, 18f→9
+  // Space hedges steadily down the 5-min or 10-min course (~3 hedges per minute of racing)
+  const n = Math.max(12, targetRaceMinutes * 3);
   for (let i = 0; i < n; i++) {
-    const t = 0.20 + (0.72 * (i + 1) / (n + 1));
+    const t = 0.08 + (0.86 * (i + 1) / (n + 1));
     const x = Math.round(START_X + t * RACE_DISTANCE);
-    if (x < FINISH_X - 32) HEDGES_X.push(x);
+    if (x < FINISH_X - 60) HEDGES_X.push(x);
   }
 }
 
@@ -129,7 +146,8 @@ function sync3DCourseAndWeather() {
     raceFurlongs,
     finishSimX: FINISH_X,
     hedgesSimX: HEDGES_X,
-    useHedges
+    useHedges,
+    pxPerFurlong: currentPxPerFurlong
   });
   scene3d.weatherSystem.applyWeatherEnvelope(weather, windForce, {
     sunLight: scene3d.sunLight,
@@ -140,19 +158,22 @@ function sync3DCourseAndWeather() {
 }
 
 function rollRaceTypeAndDistance(randomizeType = true) {
-  if (randomizeType) useHedges = random() < 0.5;
+  if (randomizeType) {
+    useHedges = random() < 0.5;
+    raceFurlongs = pick(FURLONG_CHOICES);
+  }
 
-  raceFurlongs = pick(FURLONG_CHOICES);
-  RACE_DISTANCE = raceFurlongs * PX_PER_FURLONG;
-  FINISH_X = START_X + RACE_DISTANCE;
-
+  computeDistanceForDuration();
   buildHedges();
 
   raceTypeChip.textContent = `Race: ${useHedges ? "Hedges" : "Flat"}`;
-  distanceChip.textContent = `Distance: ${raceFurlongs}f`;
+  distanceChip.textContent = `Distance: ${raceFurlongs}f (${targetRaceMinutes} Min)`;
+  if (btnDurationMode) {
+    btnDurationMode.textContent = `⏱️ Duration: ${targetRaceMinutes} Min`;
+  }
 
   const typeTxt = `${RACE_ICONS[useHedges ? "Hedges" : "Flat"]} ${useHedges ? "Hedges (Steeplechase)" : "Flat Turf"}`;
-  const distTxt = `📏 ${raceFurlongs} Furlongs`;
+  const distTxt = `📏 ${raceFurlongs} Furlongs (${targetRaceMinutes} Min Race)`;
   const w = weather || "Clear";
   const wTxt = `${WEATHER_ICONS[w] ?? ""} ${w}`;
   raceCard.innerHTML = `
@@ -344,11 +365,12 @@ function chooseHorse(i) {
 function setWeatherRandom() {
   const w = pick(["Clear", "Rain", "Wind", "Rain & Wind"]);
   weather = w;
+  const baseFall = (BASE_FALL_PROB * 300) / (targetRaceMinutes * 60);
 
-  if (w === "Clear") { fallProb = BASE_FALL_PROB; speedFactor = 1; windForce = 0; }
-  if (w === "Rain") { fallProb = BASE_FALL_PROB * 1.5; speedFactor = 0.9; windForce = 0; }
-  if (w === "Wind") { fallProb = BASE_FALL_PROB; speedFactor = 1; windForce = rand(-5, 5); }
-  if (w === "Rain & Wind") { fallProb = BASE_FALL_PROB * 1.5; speedFactor = 0.85; windForce = rand(-5, 5); }
+  if (w === "Clear") { fallProb = baseFall; speedFactor = 1; windForce = 0; }
+  if (w === "Rain") { fallProb = baseFall * 1.5; speedFactor = 0.94; windForce = 0; }
+  if (w === "Wind") { fallProb = baseFall; speedFactor = 1; windForce = rand(-5, 5); }
+  if (w === "Rain & Wind") { fallProb = baseFall * 1.5; speedFactor = 0.90; windForce = rand(-5, 5); }
 
   const icon = WEATHER_ICONS[w] ?? "";
   weatherChip.textContent = `Weather: ${icon} ${w}`;
@@ -499,8 +521,8 @@ function rankOf(i, order) {
   return order.indexOf(i) + 1;
 }
 function vmaxForDistance() {
-  const t = clamp((raceFurlongs - 5) / (18 - 5), 0, 1);
-  return Math.round(lerp(132, 84, t));
+  // Keep steady cruising velocity cap so race completes right around the 5-min or 10-min mark
+  return 118;
 }
 
 /* ========================== Simulation Dynamics =========================== */
@@ -836,16 +858,19 @@ function tick(now) {
   // Update Camera Director, Sun Shadow Frustum, Weather & Vegetation Wind
   const leadWorldX = (horses[leaderIdx]?.x || START_X) * SIM_TO_M;
   const raceProgress = clamp(((horses[leaderIdx]?.x || START_X) - START_X) / Math.max(1, RACE_DISTANCE), 0, 1);
+  const secondIdx = order[1] ?? 0;
 
   scene3d.cameraDirector.update(rawDt, {
     gameState,
     horses,
     leaderIdx,
+    secondIdx,
     playerPick,
     finishSimX: FINISH_X,
     raceFurlongs,
     nowSec
   });
+  updateCameraButtonLabel();
 
   scene3d.updateSunFollow(leadWorldX);
   scene3d.course.updateVegetationWind(nowSec, windForce);
@@ -867,7 +892,19 @@ function tick(now) {
 function updateCameraButtonLabel() {
   if (!btnCameraMode || !scene3d) return;
   const info = scene3d.cameraDirector.modeInfo;
-  btnCameraMode.textContent = `${info.icon} Cam: ${info.label}`;
+  const label = info.subLabel ? `${info.icon} Action: ${info.subLabel}` : `${info.icon} Cam: ${info.label}`;
+  if (btnCameraMode.textContent !== label) {
+    btnCameraMode.textContent = label;
+  }
+}
+
+function toggleRaceDuration() {
+  targetRaceMinutes = targetRaceMinutes === 5 ? 10 : 5;
+  rollRaceTypeAndDistance(false);
+  freshRaceMeta();
+  if (gameState !== STATE.RACING) {
+    seedHorses(baseCard);
+  }
 }
 
 window.addEventListener("keydown", (e) => {
@@ -894,7 +931,7 @@ window.addEventListener("keydown", (e) => {
   }
   if (e.key === "m" || e.key === "M") {
     const muted = audio.toggleMute();
-    btnAudioMute.textContent = muted ? "🔇 Muted" : "🔊 Audio";
+    btnAudioMute.textContent = muted ? "🔇 SFX: OFF" : "🔊 SFX: ON";
   }
   if (e.key === "v" || e.key === "V") {
     const voice = audio.toggleVoice();
@@ -953,10 +990,16 @@ if (btnCameraMode) {
   };
 }
 
+if (btnDurationMode) {
+  btnDurationMode.onclick = () => {
+    toggleRaceDuration();
+  };
+}
+
 if (btnAudioMute) {
   btnAudioMute.onclick = () => {
     const muted = audio.toggleMute();
-    btnAudioMute.textContent = muted ? "🔇 Muted" : "🔊 Audio";
+    btnAudioMute.textContent = muted ? "🔇 SFX: OFF" : "🔊 SFX: ON";
   };
 }
 

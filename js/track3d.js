@@ -129,7 +129,7 @@ export class RacecourseBuilder {
   /**
    * Rebuilds the 3D racecourse geometry whenever race distance or Flat/Hedges mode changes.
    */
-  buildCourse({ raceFurlongs, finishSimX, hedgesSimX, useHedges }) {
+  buildCourse({ raceFurlongs, finishSimX, hedgesSimX, useHedges, pxPerFurlong = PX_PER_FURLONG }) {
     // Clear existing children
     while (this.trackGroup.children.length > 0) {
       const child = this.trackGroup.children[0];
@@ -142,14 +142,14 @@ export class RacecourseBuilder {
     const startM = START_X * SIM_TO_M;
     const finishM = finishSimX * SIM_TO_M;
     const raceLengthM = finishM - startM;
-    const totalCourseLength = finishM + 140;
+    const totalCourseLength = finishM + 160;
     const laneSpan = LANES_Z[LANES_Z.length - 1] - LANES_Z[0];
     const trackWidth = laneSpan + 5.2; // 9 lanes (-8.8..+8.8 = 17.6m) plus turf margins -> 22.8m
     const railHalfWidth = trackWidth * 0.5 + 0.25; // 11.65m
 
     // 1. Main Striped Racecourse Turf Strip
-    this.turfTexture.repeat.set(Math.round(totalCourseLength / 14), 1);
-    const trackGeo = new THREE.PlaneGeometry(totalCourseLength + 80, trackWidth, 64, 8);
+    this.turfTexture.repeat.set(Math.max(20, Math.round(totalCourseLength / 14)), 1);
+    const trackGeo = new THREE.PlaneGeometry(totalCourseLength + 120, trackWidth, 64, 8);
     trackGeo.rotateX(-Math.PI / 2);
     const trackMesh = new THREE.Mesh(trackGeo, this.turfMaterial);
     trackMesh.position.set(totalCourseLength * 0.5 - 20, 0, 0);
@@ -157,7 +157,7 @@ export class RacecourseBuilder {
     this.trackGroup.add(trackMesh);
 
     // 2. Surrounding Infield & Paddock Ground Plane
-    const surroundGeo = new THREE.PlaneGeometry(totalCourseLength + 900, 420);
+    const surroundGeo = new THREE.PlaneGeometry(totalCourseLength + 1200, 520);
     surroundGeo.rotateX(-Math.PI / 2);
     const surroundMesh = new THREE.Mesh(surroundGeo, this.infieldMaterial);
     surroundMesh.position.set(totalCourseLength * 0.5, -0.03, 0);
@@ -205,7 +205,7 @@ export class RacecourseBuilder {
     this._buildFinishGantry(finishM, trackWidth);
 
     // 8. Furlong Distance Marker Poles along the inner rail
-    this._buildFurlongMarkers(startM, finishM, raceFurlongs, railHalfWidth);
+    this._buildFurlongMarkers(startM, finishM, raceFurlongs, railHalfWidth, pxPerFurlong);
 
     // 9. 3D Steeplechase Hedges (when useHedges === true)
     if (useHedges && hedgesSimX.length > 0) {
@@ -230,8 +230,8 @@ export class RacecourseBuilder {
       this.trackGroup.add(topRail);
     });
 
-    // Instanced vertical fence posts every 3.5 metres
-    const postSpacing = 3.5;
+    // Instanced vertical fence posts (capped at 1400 per side for GPU efficiency on 10-min tracks)
+    const postSpacing = Math.max(4.0, railLen / 1200);
     const postsPerSide = Math.floor(railLen / postSpacing);
     const postGeo = new THREE.BoxGeometry(0.11, 1.15, 0.11);
     const postInst = new THREE.InstancedMesh(postGeo, this.railMaterial, postsPerSide * 2);
@@ -374,7 +374,7 @@ export class RacecourseBuilder {
     this.trackGroup.add(gantry);
   }
 
-  _buildFurlongMarkers(startM, finishM, raceFurlongs, railHalfWidth = 11.65) {
+  _buildFurlongMarkers(startM, finishM, raceFurlongs, railHalfWidth = 11.65, pxPerFurlong = PX_PER_FURLONG) {
     const poleGeo = new THREE.CylinderGeometry(0.05, 0.05, 1.9, 8);
     const flagGeo = new THREE.PlaneGeometry(0.75, 0.42, 4, 1);
     flagGeo.translate(0.375, 0, 0);
@@ -382,7 +382,7 @@ export class RacecourseBuilder {
 
     for (let f = 1; f < raceFurlongs; f++) {
       const distFromFinishFurlongs = raceFurlongs - f;
-      const xPos = startM + f * PX_PER_FURLONG * SIM_TO_M;
+      const xPos = startM + f * pxPerFurlong * SIM_TO_M;
       if (xPos >= finishM - 4) continue;
 
       const pole = new THREE.Mesh(poleGeo, this.railMaterial);
@@ -511,7 +511,7 @@ export class RacecourseBuilder {
 
   _buildVegetation(totalCourseLength, railHalfWidth = 11.65) {
     // 1. Instanced Perimeter Trees along the infield & backdrop
-    const treeCount = Math.min(180, Math.max(50, Math.floor(totalCourseLength / 10)));
+    const treeCount = Math.min(340, Math.max(80, Math.floor(totalCourseLength / 18)));
     const trunkGeo = new THREE.CylinderGeometry(0.22, 0.34, 2.2, 7);
     const trunkMat = new THREE.MeshStandardMaterial({ color: "#4a321f", roughness: 0.9 });
     const crownGeo = new THREE.DodecahedronGeometry(1.75, 1);

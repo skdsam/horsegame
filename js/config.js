@@ -5,8 +5,14 @@
 export const NUM_HORSES = 9;
 export const START_X = 70;
 export const FURLONG_CHOICES = [5, 6, 7, 8, 10, 12, 16, 18];
-export const PX_PER_FURLONG = 440; // ↑ ~2x longer track distance per furlong so races last longer
-export const BASE_FALL_PROB = 0.0022; // scaled to longer race duration so stumble rate stays balanced
+export const PX_PER_FURLONG = 3400; // Scaled for 5-minute and 10-minute full-length races
+export const BASE_FALL_PROB = 0.00032; // Scaled to 5–10 min race duration so stumbles remain rare & dramatic
+
+/* Selectable Race Duration Targets (300s = 5 Minutes, 600s = 10 Minutes) */
+export const DURATION_MODES = [
+  { id: 300, label: "5 Min Race", minutes: 5, seconds: 300 },
+  { id: 600, label: "10 Min Race", minutes: 10, seconds: 600 }
+];
 
 /* Jump feel (tuned so apex of jump aligns squarely over the 3D hedge) */
 export const JUMP_DUR = 720; // ms (~15m total horizontal jump span)
@@ -16,7 +22,7 @@ export const HEAD_START_MS = 140;
 export const LATE_WINDOW = 18;
 
 /* 3D Scale Contract:
- * 1 simulation pixel = 0.2 metres (so 230 px/furlong = 46m compressed 3D furlong)
+ * 1 simulation pixel = 0.2 metres
  * 9 lanes spaced 2.2m apart along Z: -8.8m to +8.8m
  */
 export const SIM_TO_M = 0.20;
@@ -57,8 +63,9 @@ export const STATE = {
 };
 
 export const CAMERA_MODES = [
+  { id: "action", label: "Action Director (Auto-Cut)", icon: "🎬" },
   { id: "broadcast", label: "TV Broadcast", icon: "🎥" },
-  { id: "action", label: "Action Rail", icon: "🎬" },
+  { id: "rail", label: "Low Rail Sweep", icon: "📹" },
   { id: "chase", label: "Jockey Chase", icon: "🏇" },
   { id: "aerial", label: "Helicopter", icon: "🚁" },
   { id: "orbit", label: "Free Orbit", icon: "🌐" }
