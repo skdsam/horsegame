@@ -1,0 +1,14 @@
+# BEGIN skill-routing
+/_shared/
+/build-game-audio-feedback/
+/build-game-camera-controls/
+/create-game-vfx/
+/frontend-design/
+/threejs-camera-direction/
+/threejs-precipitation-surfaces/
+/threejs-procedural-animation/
+/threejs-procedural-architecture/
+/threejs-procedural-geometry/
+/threejs-skill-router/
+/threejs-visual-validation/
+# END skill-routing

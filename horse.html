@@ -4,294 +4,503 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Horse Rally — Early Hedge Jump</title>
+  <title>Horse Rally 3D — Royal Turf Club Edition</title>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
+      }
+    }
+  </script>
   <style>
     :root {
-      --bg: #0b0e16;
-      --panel: #12162a;
-      --panel2: #0e1224;
-      --text: #eaf0ff;
-      --muted: #9aa3c7;
+      --bg: #070d0a;
+      --panel: rgba(13, 21, 36, 0.86);
+      --panel2: rgba(9, 15, 28, 0.92);
+      --border: rgba(229, 193, 88, 0.24);
+      --border-subtle: rgba(122, 162, 255, 0.18);
+      --text: #f2f5fc;
+      --muted: #9aa7c7;
       --accent: #7aa2ff;
       --accent2: #56f0c1;
+      --brass: #e5c158;
       --danger: #ff6b8a;
       --grass: #1e7c3a;
-      --gold: #ffd76a;
     }
 
     * {
       box-sizing: border-box;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
     }
 
     html,
     body {
-      height: 100%
-    }
-
-    body {
+      height: 100%;
       margin: 0;
-      background: linear-gradient(180deg, #0b0c12, #0f1324 45%, #0b0c12);
-      color: var(--text)
+      background: radial-gradient(circle at 50% 0%, #102419 0%, #09101d 55%, #060911 100%);
+      color: var(--text);
+      overflow-x: hidden;
     }
 
     header {
       position: sticky;
       top: 0;
-      z-index: 5;
-      background: rgba(10, 11, 18, .6);
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid #1b2242
+      z-index: 20;
+      background: rgba(8, 13, 23, 0.78);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
     }
 
     header .wrap {
-      max-width: 1200px;
+      max-width: 1440px;
       margin: 0 auto;
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 12px 14px
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 10px 16px;
     }
 
     .logo {
+      font-weight: 900;
+      font-size: 17px;
+      letter-spacing: 0.4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--brass);
+    }
+
+    .badge-3d {
+      font-size: 11px;
       font-weight: 800;
-      letter-spacing: 0.5px
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #e5c158, #b88a28);
+      color: #090d16;
     }
 
     .chip {
       font-size: 12px;
-      padding: 6px 10px;
+      font-weight: 600;
+      padding: 6px 11px;
       border-radius: 999px;
-      background: rgba(122, 162, 255, .18);
-      border: 1px solid rgba(122, 162, 255, .25)
+      background: rgba(122, 162, 255, 0.14);
+      border: 1px solid rgba(122, 162, 255, 0.28);
     }
 
     main {
-      max-width: 1200px;
-      margin: 18px auto;
-      padding: 0 14px;
+      max-width: 1440px;
+      margin: 12px auto;
+      padding: 0 16px;
       display: grid;
-      grid-template-columns: 360px 1fr;
-      gap: 14px
+      grid-template-columns: 380px 1fr;
+      gap: 14px;
+      align-items: stretch;
+      transition: grid-template-columns 0.25s ease;
     }
 
-    @media (max-width:960px) {
+    main:has(#panelBoard.collapsed) {
+      grid-template-columns: 0px 1fr;
+      gap: 0;
+    }
+
+    #panelBoard.collapsed {
+      width: 0;
+      opacity: 0;
+      pointer-events: none;
+      border: none;
+      padding: 0;
+    }
+
+    @media (max-width: 1024px) {
       main {
-        grid-template-columns: 1fr
+        grid-template-columns: 1fr;
+      }
+      main:has(#panelBoard.collapsed) {
+        grid-template-columns: 1fr;
+      }
+      #panelBoard.collapsed {
+        display: none;
       }
     }
 
     .card {
       background: linear-gradient(180deg, var(--panel), var(--panel2));
-      border: 1px solid #1a2250;
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
       border-radius: 16px;
-      box-shadow: 0 16px 44px rgba(0, 0, 0, .35);
-      overflow: hidden
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+      overflow: hidden;
+      transition: all 0.25s ease;
     }
 
     .card h2 {
       margin: 0;
-      padding: 14px 16px;
-      border-bottom: 1px solid #1a2250;
-      font-size: 18px
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--brass);
     }
 
     .card .body {
-      padding: 14px
+      padding: 14px;
     }
 
     .pill {
       font-size: 12px;
-      padding: 4px 8px;
+      padding: 4px 9px;
       border: 1px solid #2b356e;
       border-radius: 999px;
-      background: #0e1430
+      background: #0e1430;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .odds-pill {
+      font-weight: 700;
+      color: var(--brass);
+      border-color: rgba(229, 193, 88, 0.35);
+      background: rgba(229, 193, 88, 0.1);
     }
 
     .btn {
       appearance: none;
-      border: 1px solid #22306e;
-      background: linear-gradient(180deg, #1a2a6a, #162559);
+      border: 1px solid #253575;
+      background: linear-gradient(180deg, #1b2b6b, #142052);
       color: #eaf0ff;
-      border-radius: 12px;
-      padding: 10px 12px;
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 13px;
       font-weight: 600;
-      cursor: pointer
+      cursor: pointer;
+      transition: filter 0.15s ease, transform 0.1s ease, border-color 0.15s ease;
     }
 
     .btn:hover {
-      filter: brightness(1.05)
+      filter: brightness(1.12);
+      border-color: #4666d8;
     }
 
     .btn:active {
-      transform: translateY(1px)
+      transform: translateY(1px);
     }
 
     .btn.ghost {
-      background: transparent
+      background: rgba(18, 26, 52, 0.55);
+      border-color: rgba(122, 162, 255, 0.25);
     }
 
     .btn.primary {
-      border-color: #2b4bd1;
-      background: linear-gradient(180deg, #2b4bd1, #213aa7)
+      border-color: #3b5fe2;
+      background: linear-gradient(180deg, #3256d8, #233da8);
+    }
+
+    .btn.brass {
+      border-color: #e5c158;
+      background: linear-gradient(180deg, #d9b246, #a88220);
+      color: #080c14;
+      font-weight: 800;
     }
 
     .btn.warn {
-      border-color: #7a1b34;
-      background: linear-gradient(180deg, #7a1b34, #5e1427)
+      border-color: #8c223e;
+      background: linear-gradient(180deg, #7d1c36, #591225);
+    }
+
+    .btn.active-mode {
+      border-color: var(--brass);
+      box-shadow: 0 0 0 1px rgba(229, 193, 88, 0.45);
     }
 
     .toolbar {
       display: flex;
       gap: 8px;
-      flex-wrap: wrap
+      flex-wrap: wrap;
     }
 
     .small {
       font-size: 12px;
-      color: var(--muted)
+      color: var(--muted);
+      line-height: 1.45;
     }
 
     table {
       width: 100%;
-      border-collapse: collapse
+      border-collapse: collapse;
     }
 
     th,
     td {
       padding: 8px 6px;
-      border-bottom: 1px dashed #24306a;
+      border-bottom: 1px dashed rgba(44, 60, 128, 0.55);
       text-align: left;
-      font-size: 14px
+      font-size: 13px;
     }
 
     th {
       color: #a8b2d9;
-      font-weight: 600
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    tr.selected-row {
+      background: rgba(229, 193, 88, 0.16) !important;
+    }
+
+    tbody tr:hover {
+      background: rgba(122, 162, 255, 0.08);
+    }
+
+    .saddle-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 12px;
+      color: #080c14;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
     }
 
     .dot {
       width: 10px;
       height: 10px;
       border-radius: 50%;
-      display: inline-block
+      display: inline-block;
     }
 
     .stage {
       position: relative;
       overflow: hidden;
       border-radius: 16px;
-      border: 1px solid #1a2250
+      border: 1px solid var(--border);
+      min-height: 620px;
+      height: calc(100vh - 125px);
+      max-height: 820px;
+      background: #0d172a;
     }
 
-    canvas {
+    canvas#game {
       display: block;
       width: 100%;
-      height: 560px;
-      background: linear-gradient(180deg, #74a2ff 0%, #8ec5ff 45%, var(--grass) 46%, #14632c 100%)
+      height: 100%;
+      cursor: grab;
     }
 
-    .overlay {
+    canvas#game:active {
+      cursor: grabbing;
+    }
+
+    /* Stage Top Floating Controls */
+    .stage-top-bar {
       position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      padding: 10px 12px;
+      top: 12px;
+      left: 12px;
+      right: 12px;
       display: flex;
       justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+      z-index: 6;
+    }
+
+    .stage-top-bar > * {
+      pointer-events: auto;
+    }
+
+    /* Visual Validation & Quality Drawer */
+    .debug-drawer {
+      position: absolute;
+      top: 56px;
+      right: 12px;
+      z-index: 8;
+      background: rgba(9, 14, 26, 0.92);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 280px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Bottom HUD Overlay + Minimap */
+    .overlay {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+      z-index: 6;
+    }
+
+    .hud-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       gap: 10px;
-      pointer-events: none
+      flex-wrap: wrap;
     }
 
     .commentary {
-      background: rgba(0, 0, 0, .45);
-      border: 1px solid rgba(255, 255, 255, .12);
-      padding: 10px 12px;
-      border-radius: 10px;
-      max-width: 70%;
-      backdrop-filter: blur(6px)
+      background: rgba(8, 13, 24, 0.82);
+      border: 1px solid rgba(229, 193, 88, 0.35);
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 14px;
+      max-width: 68%;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
     }
 
     .mini {
-      background: rgba(0, 0, 0, .35);
-      border: 1px solid rgba(255, 255, 255, .15);
-      padding: 10px;
+      background: rgba(8, 13, 24, 0.82);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      padding: 8px 12px;
       border-radius: 12px;
       display: flex;
       align-items: center;
-      gap: 8px
+      gap: 10px;
+      backdrop-filter: blur(10px);
+      pointer-events: auto;
     }
 
     .legend {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px
+      gap: 8px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 7px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      transition: background 0.15s ease;
+    }
+
+    .legend-item:hover {
+      background: rgba(229, 193, 88, 0.22);
+    }
+
+    .minimap-bar {
+      width: 100%;
+      height: 36px;
+      background: rgba(7, 11, 22, 0.76);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 10px;
+      backdrop-filter: blur(8px);
+      overflow: hidden;
+    }
+
+    canvas#minimapCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
     }
 
     .startbtn {
-      pointer-events: auto
+      pointer-events: auto;
     }
 
     .banner {
       position: absolute;
-      inset: auto 16px 16px auto;
-      background: linear-gradient(135deg, #1e264d, #101735);
-      border: 1px solid #2a3270;
-      border-radius: 14px;
-      padding: 12px 14px;
-      box-shadow: 0 12px 40px rgba(0, 0, 0, .45);
-      max-width: 92%
+      top: 56px;
+      right: 16px;
+      z-index: 10;
+      background: linear-gradient(145deg, rgba(22, 31, 64, 0.96), rgba(11, 17, 38, 0.98));
+      border: 1px solid var(--brass);
+      border-radius: 16px;
+      padding: 16px 18px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
+      min-width: 310px;
+      max-width: 92%;
+      backdrop-filter: blur(14px);
     }
 
     .banner h3 {
-      margin: 0 0 8px 0
+      margin: 0 0 10px 0;
+      color: var(--brass);
+      font-size: 18px;
     }
 
     .banner .grid {
       display: grid;
       grid-template-columns: auto 1fr;
-      gap: 6px 12px
+      gap: 7px 14px;
+      font-size: 14px;
     }
 
     footer {
-      max-width: 1200px;
-      margin: 16px auto 40px;
-      padding: 0 14px;
-      color: var(--muted)
+      max-width: 1440px;
+      margin: 8px auto 20px;
+      padding: 0 16px;
+      color: var(--muted);
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
     }
 
-    /* START SCREEN */
+    /* START SCREEN MODAL */
     .start {
       position: fixed;
       inset: 0;
+      z-index: 30;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(3, 5, 12, .7);
-      backdrop-filter: blur(6px)
+      background: rgba(4, 7, 15, 0.68);
+      backdrop-filter: blur(8px);
     }
 
     .start .box {
-      background: linear-gradient(180deg, var(--panel), var(--panel2));
-      border: 1px solid #20306b;
-      border-radius: 18px;
-      max-width: 1020px;
+      background: linear-gradient(180deg, rgba(16, 24, 46, 0.96), rgba(10, 15, 30, 0.98));
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      max-width: 1060px;
       width: 94%;
-      padding: 18px;
+      padding: 22px;
       display: grid;
-      grid-template-columns: 1fr 320px;
-      gap: 14px
+      grid-template-columns: 1fr 340px;
+      gap: 18px;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.7);
     }
 
-    @media (max-width:960px) {
+    @media (max-width: 960px) {
       .start .box {
-        grid-template-columns: 1fr
+        grid-template-columns: 1fr;
+        max-height: 90vh;
+        overflow-y: auto;
       }
     }
 
     .side {
-      border-left: 1px solid #20306b;
-      padding-left: 14px
+      border-left: 1px solid rgba(122, 162, 255, 0.2);
+      padding-left: 16px;
+    }
+
+    .form-row {
+      padding: 6px 8px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
     }
 
     .tip {
@@ -299,35 +508,38 @@
       color: var(--muted);
       display: flex;
       gap: 8px;
-      align-items: flex-start
+      align-items: flex-start;
     }
 
     .tip:before {
-      content: "💡"
+      content: "💡";
     }
 
     /* Countdown + photo finish flash */
     .countdown {
       position: absolute;
       inset: 0;
+      z-index: 9;
       display: none;
       align-items: center;
       justify-content: center;
-      pointer-events: none
+      pointer-events: none;
     }
 
     .countdown span {
-      font-size: 80px;
+      font-size: 96px;
       font-weight: 900;
-      text-shadow: 0 10px 30px rgba(0, 0, 0, .5)
+      color: var(--brass);
+      text-shadow: 0 12px 36px rgba(0, 0, 0, 0.75);
     }
 
     .flash {
       position: absolute;
       inset: 0;
-      background: #fff;
+      z-index: 11;
+      background: #ffffff;
       opacity: 0;
-      pointer-events: none
+      pointer-events: none;
     }
   </style>
 </head>
@@ -335,24 +547,34 @@
 <body>
   <header>
     <div class="wrap">
-      <div class="logo">🐎 <span style="opacity:.9">Horse Rally</span></div>
+      <div class="logo">
+        🐎 <span>Horse Rally</span>
+        <span class="badge-3d">3D</span>
+      </div>
       <div class="chip" id="raceTypeChip">Race: …</div>
       <div class="chip" id="distanceChip">Distance: …</div>
       <div class="chip" id="weatherTop">Weather: …</div>
       <div style="flex:1"></div>
-      <button class="btn ghost" id="btnRestartFull" title="Full reset to setup">Reset to Setup</button>
+      <button class="btn ghost" id="btnCameraMode" title="Cycle 3D Camera Angle (Hotkey: C)">🎥 Cam: TV Broadcast</button>
+      <button class="btn ghost" id="btnAudioMute" title="Toggle Web Audio SFX (Hotkey: M)">🔊 Audio</button>
+      <button class="btn ghost" id="btnVoiceToggle" title="Toggle Live Speech Announcer (Hotkey: V)">🎙️ Caller: OFF</button>
+      <button class="btn ghost" id="btnDebugDrawer" title="3D Visual Validation & Quality Settings (Hotkey: D)">⚙️ 3D View</button>
+      <button class="btn ghost" id="btnRestartFull" title="Full reset to paddock setup">Reset to Setup</button>
       <button class="btn warn" id="btnInstantReplay" title="Restart same card with same horses">Instant Replay</button>
     </div>
   </header>
 
   <main>
     <section class="card" id="panelBoard">
-      <h2>Betting Board</h2>
+      <h2>
+        <span>Tote &amp; Betting Board</span>
+        <span class="small" style="font-weight:500;color:var(--muted)">Click runner (1–5)</span>
+      </h2>
       <div class="body">
         <div class="toolbar" style="margin-bottom:10px">
-          <button class="btn" id="btnFlat">Flat Race</button>
-          <button class="btn" id="btnHedges">Hedges</button>
-          <button class="btn primary" id="btnContinue">Continue ▸</button>
+          <button class="btn" id="btnFlat">🏁 Flat Race</button>
+          <button class="btn" id="btnHedges">🌿 Hedges</button>
+          <button class="btn primary" id="btnContinue">Arm Start ▸</button>
         </div>
         <div class="small" id="raceMeta"></div>
         <div style="height:8px"></div>
@@ -360,7 +582,7 @@
           <thead>
             <tr>
               <th>#</th>
-              <th>Horse</th>
+              <th>Horse &amp; Form</th>
               <th>Odds</th>
               <th>Trainer</th>
               <th>Jockey</th>
@@ -368,20 +590,60 @@
           </thead>
           <tbody id="tbodyHorses"></tbody>
         </table>
-        <div style="height:10px"></div>
-        <div class="small" id="trevorPreview"></div>
+        <div style="height:12px"></div>
+        <div class="small" id="trevorPreview" style="padding:10px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06)"></div>
       </div>
     </section>
 
     <section class="card stage">
-      <canvas id="game" width="1200" height="560"></canvas>
+      <canvas id="game"></canvas>
+
+      <!-- Floating Top-Left Drawer Toggle inside 3D Viewport -->
+      <div class="stage-top-bar">
+        <button class="btn ghost" id="btnToggleBoard" title="Show/Hide Betting Tote Board">☰ Tote Board</button>
+        <div class="small" style="background:rgba(8,13,24,0.72);padding:5px 10px;border-radius:999px;border:1px solid rgba(255,255,255,0.12)">
+          Drag to orbit in Paddock / Orbit Cam • Wheel to zoom
+        </div>
+      </div>
+
+      <!-- 3D Visual Validation & Quality Drawer -->
+      <div class="debug-drawer" id="debugDrawer" style="display:none">
+        <div style="font-weight:700;font-size:13px;color:var(--brass)">3D Visual Validation &amp; Settings</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <label class="small" for="qualitySelect">Quality Tier:</label>
+          <select id="qualitySelect" class="btn" style="padding:4px 8px">
+            <option value="high">High (Shadows + Full VFX)</option>
+            <option value="balanced">Balanced (1.25x DPR)</option>
+            <option value="reduced">Reduced Motion</option>
+          </select>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <label class="small" for="debugModeSelect">Diagnostic Pass:</label>
+          <select id="debugModeSelect" class="btn" style="padding:4px 8px">
+            <option value="off">Final Shading (No-Post Baseline)</option>
+            <option value="wireframe">Mesh Wireframe</option>
+          </select>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
+          <label class="small" for="seedInput">PRNG Seed:</label>
+          <input id="seedInput" class="btn" style="width:110px;padding:4px 8px;background:#0b1126" />
+          <button class="btn primary" id="btnApplySeed" style="padding:4px 8px">Apply</button>
+        </div>
+        <div class="small" id="telemetryStats" style="font-family:monospace;color:var(--accent2)">FPS: 60 • Draws: --</div>
+      </div>
+
+      <!-- Bottom HUD: Commentary + Legend + 3D Track Progress Minimap -->
       <div class="overlay">
-        <div class="commentary" id="commentary">Welcome! Use the start screen to add players or click a horse here, then
-          start the race.</div>
-        <div class="mini">
-          <div class="legend" id="legend"></div>
-          <div class="pill" id="weatherChip">Weather: Clear</div>
-          <button class="btn startbtn" id="btnStart" style="display:none">Start Race</button>
+        <div class="hud-row">
+          <div class="commentary" id="commentary">Welcome to Horse Rally 3D! Add players or pick a horse on the Tote Board to begin.</div>
+          <div class="mini">
+            <div class="legend" id="legend"></div>
+            <div class="pill" id="weatherChip">Weather: Clear</div>
+            <button class="btn brass startbtn" id="btnStart" style="display:none">🏇 Start Race</button>
+          </div>
+        </div>
+        <div class="minimap-bar">
+          <canvas id="minimapCanvas" width="800" height="36"></canvas>
         </div>
       </div>
 
@@ -391,964 +653,3457 @@
       <div class="banner" id="finishBanner" style="display:none">
         <h3 id="finishTitle">Race Finished!</h3>
         <div class="grid" id="finishGrid"></div>
-        <div style="height:8px"></div>
-        <div id="playersResult" class="small" style="opacity:.9"></div>
-        <div style="height:8px"></div>
+        <div style="height:10px"></div>
+        <div id="playersResult" class="small" style="color:var(--brass);font-weight:700"></div>
+        <div style="height:12px"></div>
         <div class="toolbar">
-          <button class="btn primary" id="btnPlayAgain">Play again</button>
-          <button class="btn" id="btnChangeCard">New Card</button>
+          <button class="btn brass" id="btnPlayAgain">Play Again</button>
+          <button class="btn" id="btnChangeCard">New Race Card</button>
         </div>
       </div>
     </section>
   </main>
 
   <footer>
-    Tips: Add players on the start screen • Click a horse or press 1–5 • Space starts • F=Flat, H=Hedges • High-energy
-    commentary on!
+    <span>Hotkeys: <b>1–5</b> Pick/Focus Horse • <b>Space</b> Start / Replay • <b>F</b> Flat • <b>H</b> Hedges • <b>C</b> Camera Angle • <b>M</b> Mute • <b>V</b> Voice Caller • <b>D</b> 3D Diagnostics</span>
+    <span>Horse Rally 3D — Powered by Three.js</span>
   </footer>
 
-  <!-- START SCREEN -->
+  <!-- START SCREEN MODAL -->
   <div class="start" id="startModal">
     <div class="box">
       <div>
-        <div class="small" style="opacity:.9">Welcome to</div>
-        <h2 style="margin:4px 0 12px">Trevor Gray's Horse Rally</h2>
+        <div class="small" style="color:var(--brass);font-weight:700;letter-spacing:0.6px">ROYAL TURF CLUB • THREE.JS EDITION</div>
+        <h2 style="margin:4px 0 14px;font-size:24px">Trevor Gray's Horse Rally 3D</h2>
 
-        <div class="small">Race Card</div>
+        <div class="small">Today's Feature Race Card</div>
         <div id="raceCard" class="pill"
-          style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#0e1430;border-color:#2c3a72;padding:10px 12px">
+          style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#0b1126;border-color:#2c3a72;padding:10px 12px;margin-top:4px">
         </div>
 
-        <div class="small" style="margin-top:12px">Players (max = number of horses)</div>
-        <div id="playersUI" style="margin:8px 0 12px;display:grid;gap:8px"></div>
+        <div class="small" style="margin-top:14px">Local Multiplayer Paddock (max = 5 runners)</div>
+        <div id="playersUI" style="margin:8px 0 12px;display:flex;flex-wrap:wrap;gap:8px"></div>
         <div class="toolbar" style="align-items:center">
           <input id="playerName" placeholder="Player name" class="btn"
-            style="background:#0e1430;border-color:#24336e;width:180px" />
-          <select id="playerHorse" class="btn" style="background:#0e1430;border-color:#24336e"></select>
-          <button class="btn" id="btnAddPlayer">Add player</button>
+            style="background:#0b1126;border-color:#24336e;width:170px" />
+          <select id="playerHorse" class="btn" style="background:#0b1126;border-color:#24336e"></select>
+          <button class="btn" id="btnAddPlayer">+ Add Player</button>
           <div style="flex:1"></div>
-          <button class="btn primary" id="btnQuickStart">Start Race Setup</button>
+          <button class="btn brass" id="btnQuickStart">Enter Racecourse ▸</button>
         </div>
-        <div class="small" id="playersHint" style="margin-top:6px;opacity:.8">
-          Horses cannot be shared. Click a player badge to remove them.
+        <div class="small" id="playersHint" style="margin-top:8px;opacity:.82">
+          Horses cannot be shared between players. Click a player badge to remove them, or head straight in for solo betting.
         </div>
       </div>
 
       <aside class="side">
-        <h3 style="margin:0 0 8px">Race Tips &amp; Form</h3>
-        <div class="tip" style="margin-bottom:8px">Late closers like a hot early pace — watch for surges after halfway.
-        </div>
-        <div class="tip" style="margin-bottom:8px">Inside lanes save ground but risk traffic — wide slingshots can win
-          late.</div>
-        <div class="tip" style="margin-bottom:12px">Wind &amp; rain nudge stumble chance and slow finishes.</div>
-        <div id="formList" class="small" style="display:grid;gap:8px"></div>
+        <h3 style="margin:0 0 10px;color:var(--brass);font-size:16px">Race Tips &amp; Paddock Form</h3>
+        <div class="tip" style="margin-bottom:8px">Late closers relish a hot early pace — watch for golden <b>&gt;&gt;&gt;</b> overdrive surges after halfway.</div>
+        <div class="tip" style="margin-bottom:8px">Switch between <b>TV Broadcast</b>, <b>Action Rail</b>, <b>Jockey Chase</b>, and <b>Helicopter</b> cameras live with <b>C</b>.</div>
+        <div class="tip" style="margin-bottom:12px">Rain slicks the turf, kicks up spray, and elevates stumble risk over steeplechase hedges.</div>
+        <div id="formList" class="small" style="display:grid;gap:8px;max-height:280px;overflow-y:auto"></div>
       </aside>
     </div>
   </div>
 
-  <script>
-    /* ========================== Utility ========================== */
-    const rand = (a, b) => a + Math.random() * (b - a);
-    const randi = (a, b) => Math.floor(rand(a, b + 1));
-    const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
-    const lerp = (a, b, t) => a + (b - a) * t;
-    const shade = (hex, amt) => { let c = parseInt(hex.slice(1), 16), r = (c >> 16) + amt, g = ((c >> 8) & 255) + amt, b = (c & 255) + amt; return '#' + ((1 << 24) + (clamp(r, 0, 255) << 16) + (clamp(g, 0, 255) << 8) + clamp(b, 0, 255)).toString(16).slice(1) }
+  <script type="module">
+import * as THREE from "three";
 
-    /* ========================== Config =========================== */
-    const NUM_HORSES = 5;
-    const LANES_Y = [120, 200, 280, 360, 440];
-    const START_X = 70;
 
-    /* Distance system */
-    const FURLONG_CHOICES = [5, 6, 7, 8, 10, 12, 16, 18];
-    const PX_PER_FURLONG = 230; // ↑ longer track per furlong
-    let raceFurlongs = 12;
-    let RACE_DISTANCE = raceFurlongs * PX_PER_FURLONG;
-    let FINISH_X = START_X + RACE_DISTANCE;
+/* --- MODULE: config.js --- */
+/* ============================================================================
+ * Horse Rally 3D — Configuration, Data Pools & Deterministic PRNG
+ * ============================================================================ */
 
-    const BASE_FALL_PROB = 0.004;
+const NUM_HORSES = 5;
+const START_X = 70;
+const FURLONG_CHOICES = [5, 6, 7, 8, 10, 12, 16, 18];
+const PX_PER_FURLONG = 230;
+const BASE_FALL_PROB = 0.004;
 
-    /* Jump feel */
-    const JUMP_DUR = 900;
-    const JUMP_H = 22;
-    /* Early jump tuning */
-    const PRE_JUMP = 60;
-    const HEAD_START_MS = 140;
-    const LATE_WINDOW = 18;
+/* Jump feel (preserved from 2D simulation) */
+const JUMP_DUR = 900; // ms
+const JUMP_H = 22;    // sim units (~2.2m in 3D)
+const PRE_JUMP = 60;
+const HEAD_START_MS = 140;
+const LATE_WINDOW = 18;
 
-    /* Dynamic hedges (built per race) */
-    let HEDGES_X = [];
+/* 3D Scale Contract:
+ * 1 simulation pixel = 0.2 metres (so 230 px/furlong = 46m compressed 3D furlong)
+ * 5 lanes spaced 2.5m apart along Z: -5.0m, -2.5m, 0.0m, +2.5m, +5.0m
+ */
+const SIM_TO_M = 0.20;
+const LANES_Z = [-5.0, -2.5, 0.0, 2.5, 5.0];
+const LANES_Y_2D = [120, 200, 280, 360, 440]; // legacy compatibility
 
-    const COLORS = ["#ff526d", "#61a0ff", "#ffd85a", "#f070ff", "#36c7c7"];
-    const STATE = { BOARD: 0, PICK: 1, WAIT: 2, COUNTDOWN: 3, RACING: 4, FINISHED: 5 };
+const COLORS = ["#ff526d", "#61a0ff", "#ffd85a", "#f070ff", "#36c7c7"];
 
-    /* ======================= Assets ======================= */
-    const ASSETS = { grass: new Image(), horses: [new Image(), new Image(), new Image(), new Image(), new Image()], ready: false };
-    ASSETS.grass.src = 'grass.png';
-    ASSETS.horses[0].src = 'horse1.png';
-    ASSETS.horses[1].src = 'horse2.png';
-    ASSETS.horses[2].src = 'horse3.png';
-    ASSETS.horses[3].src = 'horse4.png';
-    ASSETS.horses[4].src = 'horse5.png';
-    Promise.all([...ASSETS.horses.map(img => new Promise(res => img.onload = res)), new Promise(res => ASSETS.grass.onload = res)]).then(() => ASSETS.ready = true);
+const EQUINE_COATS = [
+  { name: "Bay", body: "#6b381d", mane: "#1c130e", muzzle: "#3d2213", socks: "#f0ece1", hooves: "#1f1b18" },
+  { name: "Chestnut", body: "#8c421e", mane: "#59250c", muzzle: "#632d14", socks: "#f5efe6", hooves: "#29221c" },
+  { name: "Dapple Grey", body: "#b5bbc4", mane: "#4a5059", muzzle: "#69707a", socks: "#e8ecf2", hooves: "#26282b" },
+  { name: "Black Satin", body: "#232328", mane: "#111114", muzzle: "#2e2d33", socks: "#dce0e8", hooves: "#17171a" },
+  { name: "Palomino", body: "#c49446", mane: "#f2ead5", muzzle: "#8c672b", socks: "#faf6eb", hooves: "#332a1e" }
+];
 
-    /* ====================== Data pools & helpers ======================= */
-    const HORSE_NAMES = [
-      "Lightning Menzies", "Thunderbolt Miller", "Majesty Briggs", "Starlight Chapman", "Blaze Gray",
-      "Spirit Brind", "Apollo Menzies", "Comet Miller", "Dusk Briggs", "Midnight Chapman",
-      "Eclipse Gray", "Sundance Brind", "Rocket Menzies", "Storm Miller", "Mystic Briggs",
-      "Sapphire Chapman", "Wild Gray", "Charger Brind", "Racer Menzies", "Victory Miller",
-      "Phantom Briggs", "Galaxy Menzies", "Miracle Chapman", "Fury Miller", "Zephyr Briggs",
-      "Copper Chapman", "Inferno Miller", "Vortex Brind", "Mirage Gray", "Tempest Briggs",
-      "Dynamo Chapman", "Blitz Menzies", "Nova Miller", "Cosmos Brind",
-      "Sterling Baker", "Ironheart Davies", "Crimson Arrow", "Shadowfax Li", "Gale Dixon",
-      "Onyx Steele", "Solar Flare", "High Tide Jackson", "Avalanche Bell", "Whisper Wind",
-      "Canyon King", "Golden Spur", "Phoenix Ash", "Diamond Dust", "Silver Streak",
-      "Maverick Jones", "Tidal Wave", "Desert Hawk", "Spartan Gold", "Terra Firma",
-      "Granite Peak", "Emerald Fire", "Jade Runner", "Sky Marshal", "Swift Justice",
-      "Aether Drift", "Oracle Reed", "Zenith Power", "Steel Curtain", "Monarch Reign",
-      "Viper Strike", "Polaris Star", "Glacier Rush"
-    ];
+const STATE = {
+  BOARD: 0,
+  PICK: 1,
+  WAIT: 2,
+  COUNTDOWN: 3,
+  RACING: 4,
+  FINISHED: 5
+};
 
-    const TRAINERS = [
-      "T. Smith", "K. Brown", "D. Johnson", "F. Martin", "B. Cooper", "L. Kramer",
-      "P. Davis", "G. White", "M. Wilson", "R. Taylor", "E. Harris", "A. King",
-      "J. Clark", "S. Hall", "C. Lewis", "H. Young", "W. Lee", "Z. Green",
-      "V. Carter", "O. Parker", "N. Hayes"
-    ];
+const CAMERA_MODES = [
+  { id: "broadcast", label: "TV Broadcast", icon: "🎥" },
+  { id: "action", label: "Action Rail", icon: "🎬" },
+  { id: "chase", label: "Jockey Chase", icon: "🏇" },
+  { id: "aerial", label: "Helicopter", icon: "🚁" },
+  { id: "orbit", label: "Free Orbit", icon: "🌐" }
+];
 
-    const JOCKEYS = [
-      "J. Diaz", "R. Jackson", "M. Li", "S. Carter", "N. Hall", "W. Baker",
-      "C. Chen", "A. Patel", "L. Jones", "B. O'Connell", "E. Rodriguez", "G. Singh",
-      "K. Ito", "D. Murphy", "T. Vance", "V. Khan", "F. Evans", "H. Kim",
-      "P. Silva", "I. Weber", "Z. Scott"
-    ];
+const HORSE_NAMES = [
+  "Lightning Menzies", "Thunderbolt Miller", "Majesty Briggs", "Starlight Chapman", "Blaze Gray",
+  "Spirit Brind", "Apollo Menzies", "Comet Miller", "Dusk Briggs", "Midnight Chapman",
+  "Eclipse Gray", "Sundance Brind", "Rocket Menzies", "Storm Miller", "Mystic Briggs",
+  "Sapphire Chapman", "Wild Gray", "Charger Brind", "Racer Menzies", "Victory Miller",
+  "Phantom Briggs", "Galaxy Menzies", "Miracle Chapman", "Fury Miller", "Zephyr Briggs",
+  "Copper Chapman", "Inferno Miller", "Vortex Brind", "Mirage Gray", "Tempest Briggs",
+  "Dynamo Chapman", "Blitz Menzies", "Nova Miller", "Cosmos Brind",
+  "Sterling Baker", "Ironheart Davies", "Crimson Arrow", "Shadowfax Li", "Gale Dixon",
+  "Onyx Steele", "Solar Flare", "High Tide Jackson", "Avalanche Bell", "Whisper Wind",
+  "Canyon King", "Golden Spur", "Phoenix Ash", "Diamond Dust", "Silver Streak",
+  "Maverick Jones", "Tidal Wave", "Desert Hawk", "Spartan Gold", "Terra Firma",
+  "Granite Peak", "Emerald Fire", "Jade Runner", "Sky Marshal", "Swift Justice",
+  "Aether Drift", "Oracle Reed", "Zenith Power", "Steel Curtain", "Monarch Reign",
+  "Viper Strike", "Polaris Star", "Glacier Rush"
+];
 
-    const OWNERS = [
-      "Riverstone Stables", "Blue Jay Racing", "Silver Oak Syndicate", "Northwind Farms", "Crimson Gate",
-      "Golden Crown Racing", "Willow Creek Farm", "Victory Line Stables", "Black Swan Syndicate",
-      "Rising Sun Ranch", "Emerald Isle Group", "Steel Barrier Stables", "Shadow Run Farms",
-      "Iron Horse Ventures", "Monarch Racing LLC"
-    ];
-    const LAST_TMPL = [
-      d => `Last race: ${d.pos} at Ascot, ${d.days} days ago`,
-      d => `Last race: ${d.pos} at Cheltenham, ${d.days} days ago`,
-      d => `Last race: ${d.pos} at Aintree, ${d.days} days ago`,
-      d => `Last race: ${d.pos} at Newmarket, ${d.days} days ago`,
-      d => `Last race: ${d.pos} at Goodwood, ${d.days} days ago`,
-    ];
-    const POS = ["1st", "2nd", "3rd", "4th"];
-    const randomOdds = () => `${randi(1, 12)}-${randi(1, 12)}`;
-    const pick = arr => arr[randi(0, arr.length - 1)];
+const TRAINERS = [
+  "T. Smith", "K. Brown", "D. Johnson", "F. Martin", "B. Cooper", "L. Kramer",
+  "P. Davis", "G. White", "M. Wilson", "R. Taylor", "E. Harris", "A. King",
+  "J. Clark", "S. Hall", "C. Lewis", "H. Young", "W. Lee", "Z. Green",
+  "V. Carter", "O. Parker", "N. Hayes"
+];
 
-    /* Icons */
-    const raceIcons = { Flat: "🏁", Hedges: "🌿" };
-    const weatherIcons = { "Clear": "☀️", "Rain": "🌧️", "Wind": "💨", "Rain & Wind": "🌧️💨" };
+const JOCKEYS = [
+  "J. Diaz", "R. Jackson", "M. Li", "S. Carter", "N. Hall", "W. Baker",
+  "C. Chen", "A. Patel", "L. Jones", "B. O'Connell", "E. Rodriguez", "G. Singh",
+  "K. Ito", "D. Murphy", "T. Vance", "V. Khan", "F. Evans", "H. Kim",
+  "P. Silva", "I. Weber", "Z. Scott"
+];
 
-    /* ======================== Game state & UI ========================= */
-    let canvas, ctx, W, H, dpr, camX = 0;
-    let gameState = STATE.BOARD;
-    let useHedges = false;
-    let weather = "Clear";
-    let speedFactor = 1, windForce = 0, fallProb = BASE_FALL_PROB;
+const OWNERS = [
+  "Riverstone Stables", "Blue Jay Racing", "Silver Oak Syndicate", "Northwind Farms", "Crimson Gate",
+  "Golden Crown Racing", "Willow Creek Farm", "Victory Line Stables", "Black Swan Syndicate",
+  "Rising Sun Ranch", "Emerald Isle Group", "Steel Barrier Stables", "Shadow Run Farms",
+  "Iron Horse Ventures", "Monarch Racing LLC"
+];
 
-    let startTime = 0, lastTs = 0;
-    let commentaryTs = 0, commentaryInterval = 950;
-    let commentary = "";
+const LAST_TMPL = [
+  d => `Last race: ${d.pos} at Ascot, ${d.days} days ago`,
+  d => `Last race: ${d.pos} at Cheltenham, ${d.days} days ago`,
+  d => `Last race: ${d.pos} at Aintree, ${d.days} days ago`,
+  d => `Last race: ${d.pos} at Newmarket, ${d.days} days ago`,
+  d => `Last race: ${d.pos} at Goodwood, ${d.days} days ago`
+];
 
-    let horses = []; let baseCard = []; let playerPick = null; let players = [];
-    let finishTimes = []; let fallen = []; let jumpStart = [];
-    const model = [];
-    let currentLeader = -1; let leaderSince = 0;
+const POS = ["1st", "2nd", "3rd", "4th"];
+const RACE_ICONS = { Flat: "🏁", Hedges: "🌿" };
+const WEATHER_ICONS = {
+  "Clear": "☀️",
+  "Rain": "🌧️",
+  "Wind": "💨",
+  "Rain & Wind": "🌧️💨"
+};
 
-    /* Enhanced Visuals */
-    const particles = [];
-    let shake = 0;
-    function addParticle(x, y, color, speed, life) {
-      particles.push({ x, y, color, vx: -speed + rand(-10, 10), vy: rand(-10, 10), life, maxLife: life });
+/* Deterministic Seedable Mulberry32 PRNG for Visual Validation & Replays */
+let currentSeed = (Date.now() ^ 0x9e3779b9) >>> 0;
+let prngState = currentSeed;
+
+function setSeed(seed) {
+  currentSeed = (Number(seed) || 1337) >>> 0;
+  prngState = currentSeed;
+  return currentSeed;
+}
+
+function getSeed() {
+  return currentSeed;
+}
+
+function random() {
+  let t = (prngState += 0x6D2B79F5);
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
+const rand = (a, b) => a + random() * (b - a);
+const randi = (a, b) => Math.floor(rand(a, b + 1));
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const pick = arr => arr[randi(0, arr.length - 1)];
+const randomOdds = () => `${randi(1, 12)}-${randi(1, 12)}`;
+
+
+/* --- MODULE: audio.js --- */
+/* ============================================================================
+ * Horse Rally 3D — Procedural Web Audio Synthesizer & Voice Announcer
+ * Skill: build-game-audio-feedback
+ * ============================================================================ */
+
+class RaceAudioEngine {
+  constructor() {
+    this.ctx = null;
+    this.muted = false;
+    this.voiceEnabled = false;
+    this.unlocked = false;
+
+    this.crowdGain = null;
+    this.crowdSource = null;
+    this.rainGain = null;
+    this.rainSource = null;
+
+    this.hoofTimers = [0, 0, 0, 0, 0];
+    this.lastSpokenText = "";
+  }
+
+  unlock() {
+    if (this.unlocked && this.ctx) {
+      if (this.ctx.state === "suspended") this.ctx.resume();
+      return;
+    }
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    this.ctx = new AudioCtx();
+    this.unlocked = true;
+    this._setupAmbience();
+  }
+
+  _setupAmbience() {
+    if (!this.ctx) return;
+    // Create 2-second pink-ish noise buffer for crowd and rain loops
+    const sr = this.ctx.sampleRate;
+    const len = sr * 2;
+    const buf = this.ctx.createBuffer(1, len, sr);
+    const data = buf.getChannelData(0);
+    let b0 = 0, b1 = 0, b2 = 0, b3 = 0;
+    for (let i = 0; i < len; i++) {
+      const white = Math.random() * 2 - 1;
+      b0 = 0.99765 * b0 + white * 0.0990460;
+      b1 = 0.96300 * b1 + white * 0.2965164;
+      b2 = 0.57000 * b2 + white * 1.0526913;
+      b3 = white * 0.1848;
+      data[i] = (b0 + b1 + b2 + b3) * 0.08;
+    }
+    this.noiseBuffer = buf;
+
+    // Crowd loop
+    const crowdSrc = this.ctx.createBufferSource();
+    crowdSrc.buffer = buf;
+    crowdSrc.loop = true;
+
+    const crowdFilter = this.ctx.createBiquadFilter();
+    crowdFilter.type = "bandpass";
+    crowdFilter.frequency.value = 650;
+    crowdFilter.Q.value = 0.7;
+
+    this.crowdGain = this.ctx.createGain();
+    this.crowdGain.gain.value = 0.0;
+
+    crowdSrc.connect(crowdFilter);
+    crowdFilter.connect(this.crowdGain);
+    this.crowdGain.connect(this.ctx.destination);
+    crowdSrc.start();
+    this.crowdSource = crowdSrc;
+
+    // Rain / wind loop
+    const rainSrc = this.ctx.createBufferSource();
+    rainSrc.buffer = buf;
+    rainSrc.loop = true;
+
+    const rainFilter = this.ctx.createBiquadFilter();
+    rainFilter.type = "highpass";
+    rainFilter.frequency.value = 1200;
+
+    this.rainGain = this.ctx.createGain();
+    this.rainGain.gain.value = 0.0;
+
+    rainSrc.connect(rainFilter);
+    rainFilter.connect(this.rainGain);
+    this.rainGain.connect(this.ctx.destination);
+    rainSrc.start();
+    this.rainSource = rainSrc;
+  }
+
+  setMuted(muted) {
+    this.muted = muted;
+    if (this.muted && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    if (this.crowdGain && this.ctx) {
+      this.crowdGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.1);
+    }
+    if (this.rainGain && this.ctx) {
+      this.rainGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.1);
+    }
+    return this.muted;
+  }
+
+  toggleMute() {
+    this.unlock();
+    return this.setMuted(!this.muted);
+  }
+
+  toggleVoice() {
+    this.unlock();
+    this.voiceEnabled = !this.voiceEnabled;
+    if (!this.voiceEnabled && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    } else if (this.voiceEnabled) {
+      this.speak("Live race commentary enabled.");
+    }
+    return this.voiceEnabled;
+  }
+
+  speak(text, priority = false) {
+    if (!this.voiceEnabled || this.muted || !window.speechSynthesis) return;
+    if (text === this.lastSpokenText && !priority) return;
+    this.lastSpokenText = text;
+    try {
+      if (priority) window.speechSynthesis.cancel();
+      else if (window.speechSynthesis.speaking) return;
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 1.16;
+      u.pitch = 1.05;
+      u.volume = 0.85;
+      window.speechSynthesis.speak(u);
+    } catch (_) {
+      // Ignore speech synthesis errors on restricted platforms
+    }
+  }
+
+  updateAmbience(isRacing, progress, weather) {
+    if (!this.ctx || !this.unlocked) return;
+    const now = this.ctx.currentTime;
+    if (this.muted) {
+      this.crowdGain.gain.setTargetAtTime(0, now, 0.08);
+      this.rainGain.gain.setTargetAtTime(0, now, 0.08);
+      return;
     }
 
-    /* DOM */
-    const tbody = document.getElementById('tbodyHorses');
-    const legendEl = document.getElementById('legend');
-    const metaEl = document.getElementById('raceMeta');
-    const trevorEl = document.getElementById('trevorPreview');
-    const comEl = document.getElementById('commentary');
-    const weatherChip = document.getElementById('weatherChip');
-    const weatherTop = document.getElementById('weatherTop');
-    const banner = document.getElementById('finishBanner');
-    const bannerTitle = document.getElementById('finishTitle');
-    const bannerGrid = document.getElementById('finishGrid');
-    const playersResultEl = document.getElementById('playersResult');
-    const startModal = document.getElementById('startModal');
-    const btnStart = document.getElementById('btnStart');
-    const playersUI = document.getElementById('playersUI');
-    const playerNameInp = document.getElementById('playerName');
-    const playerHorseSel = document.getElementById('playerHorse');
-    const formList = document.getElementById('formList');
-    const countdownEl = document.getElementById('countdown');
-    const countNumEl = document.getElementById('countNum');
-    const flashEl = document.getElementById('flash');
-    const raceTypeChip = document.getElementById('raceTypeChip');
-    const distanceChip = document.getElementById('distanceChip');
-    const raceCard = document.getElementById('raceCard');
+    // Crowd swells as horses near the finish grandstand (progress 0.7 -> 1.0)
+    let targetCrowd = 0.015;
+    if (isRacing) {
+      targetCrowd = 0.04 + Math.pow(Math.max(0, progress), 2.2) * 0.22;
+    }
+    this.crowdGain.gain.setTargetAtTime(targetCrowd, now, 0.15);
 
-    /* ============================ Setup ============================= */
-    function resize() {
-      const w = document.querySelector('.stage').clientWidth - 2;
-      const h = 560;
-      dpr = Math.min(2, window.devicePixelRatio || 1);
-      canvas.width = Math.floor(w * dpr);
-      canvas.height = Math.floor(h * dpr);
-      canvas.style.height = h + "px";
-      canvas.style.width = w + "px";
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      W = w; H = h;
+    // Rain ambience
+    let targetRain = 0.0;
+    if (weather.includes("Rain")) targetRain += 0.09;
+    if (weather.includes("Wind")) targetRain += 0.05;
+    this.rainGain.gain.setTargetAtTime(targetRain, now, 0.25);
+  }
+
+  playCountdownTick(num) {
+    if (this.muted) return;
+    this.unlock();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(num === 1 ? 660 : 520, now);
+    gain.gain.setValueAtTime(0.18, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.18);
+  }
+
+  playStartBell() {
+    if (this.muted) return;
+    this.unlock();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+
+    // Brass starting bell partials
+    [880, 1320, 1760, 2420].forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now);
+      gain.gain.setValueAtTime(0.16 / (idx + 1), now);
+      gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.75);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.78);
+    });
+
+    // Gate latch clatter
+    this._playNoiseBurst(0.12, 900, 0.22);
+  }
+
+  playHoofbeat(pan = 0, wet = false, volume = 0.08) {
+    if (this.muted || !this.ctx || !this.unlocked) return;
+    const now = this.ctx.currentTime;
+
+    // Low turf thud
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    osc.type = "sine";
+    const startFreq = wet ? 145 : 120 + Math.random() * 25;
+    osc.frequency.setValueAtTime(startFreq, now);
+    osc.frequency.exponentialRampToValueAtTime(42, now + 0.055);
+
+    g.gain.setValueAtTime(volume, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+
+    if (this.ctx.createStereoPanner) {
+      const panner = this.ctx.createStereoPanner();
+      panner.pan.setValueAtTime(Math.max(-0.85, Math.min(0.85, pan)), now);
+      osc.connect(g);
+      g.connect(panner);
+      panner.connect(this.ctx.destination);
+    } else {
+      osc.connect(g);
+      g.connect(this.ctx.destination);
     }
 
-    /* Build hedge positions for a given race */
-    function buildHedges() {
-      HEDGES_X = [];
-      if (!useHedges) return;
-      const n = Math.max(3, Math.round(raceFurlongs / 2)); // 5f→3, 12f→6, 18f→9
-      for (let i = 0; i < n; i++) {
-        const t = 0.20 + (0.72 * (i + 1) / (n + 1));              // from 20% to ~92%
-        const x = Math.round(START_X + t * RACE_DISTANCE);
-        if (x < FINISH_X - 32) HEDGES_X.push(x);            // never after finish
+    osc.start(now);
+    osc.stop(now + 0.065);
+
+    if (wet && Math.random() < 0.45) {
+      this._playNoiseBurst(0.05, 2200, volume * 0.45);
+    }
+  }
+
+  playJumpBrush() {
+    if (this.muted || !this.ctx || !this.unlocked) return;
+    this._playNoiseBurst(0.18, 1400, 0.11);
+  }
+
+  playBurstSurge() {
+    if (this.muted || !this.ctx || !this.unlocked) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(220, now);
+    osc.frequency.exponentialRampToValueAtTime(540, now + 0.28);
+    g.gain.setValueAtTime(0.09, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.30);
+    osc.connect(g);
+    g.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.32);
+  }
+
+  playStumble() {
+    if (this.muted || !this.ctx || !this.unlocked) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(160, now);
+    osc.frequency.exponentialRampToValueAtTime(48, now + 0.35);
+    g.gain.setValueAtTime(0.18, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+    osc.connect(g);
+    g.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.4);
+  }
+
+  playPhotoFinishShutter() {
+    if (this.muted || !this.ctx || !this.unlocked) return;
+    this._playNoiseBurst(0.04, 3400, 0.25);
+    setTimeout(() => this._playNoiseBurst(0.06, 2600, 0.18), 75);
+  }
+
+  playWinnerFanfare() {
+    if (this.muted || !this.ctx || !this.unlocked) return;
+    const now = this.ctx.currentTime;
+    const notes = [523.25, 659.25, 783.99, 1046.5];
+    notes.forEach((freq, i) => {
+      const t = now + i * 0.11;
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(0.14, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+      osc.connect(g);
+      g.connect(this.ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.4);
+    });
+  }
+
+  _playNoiseBurst(duration, centerFreq, gainVal) {
+    if (!this.ctx || !this.noiseBuffer) return;
+    const now = this.ctx.currentTime;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.noiseBuffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(centerFreq, now);
+    filter.Q.setValueAtTime(1.2, now);
+
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(gainVal, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    src.connect(filter);
+    filter.connect(g);
+    g.connect(this.ctx.destination);
+    src.start(now);
+    src.stop(now + duration + 0.02);
+  }
+}
+
+
+/* --- MODULE: horse3d.js --- */
+/* ============================================================================
+ * Horse Rally 3D — Articulated 3D Horse & Jockey Procedural Assembly + Animator
+ * Skills: threejs-procedural-geometry, threejs-procedural-animation
+ * ============================================================================ */
+
+
+/**
+ * Creates a canvas-backed texture for numbered saddlecloths & overhead badges
+ */
+function makeSaddleNumberTexture(number, silkColor) {
+  const c = document.createElement("canvas");
+  c.width = 128;
+  c.height = 128;
+  const ctx = c.getContext("2d");
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, 128, 128);
+
+  ctx.strokeStyle = silkColor;
+  ctx.lineWidth = 14;
+  ctx.strokeRect(7, 7, 114, 114);
+
+  ctx.fillStyle = "#0e1324";
+  ctx.font = "900 72px Inter, system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(String(number), 64, 68);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function makeNameplateCanvas() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 128;
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return { canvas, texture };
+}
+
+function updateNameplateSprite(actor, horseName, silkColor, isLeader, isBursting, isFallen) {
+  const stateKey = `${horseName}|${silkColor}|${isLeader ? 1 : 0}|${isBursting ? 1 : 0}|${isFallen ? 1 : 0}`;
+  if (actor.lastLabelState === stateKey) return;
+  actor.lastLabelState = stateKey;
+
+  const { canvas, texture } = actor.labelData;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Pill background
+  const bgX = 24, bgY = 28, bgW = 464, bgH = 74, r = 22;
+  ctx.fillStyle = isFallen ? "rgba(75, 14, 28, 0.88)" : "rgba(11, 16, 32, 0.84)";
+  ctx.beginPath();
+  ctx.roundRect(bgX, bgY, bgW, bgH, r);
+  ctx.fill();
+
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = isLeader ? "#ffd76a" : silkColor;
+  ctx.stroke();
+
+  // Silk color badge circle
+  ctx.fillStyle = silkColor;
+  ctx.beginPath();
+  ctx.arc(66, 65, 22, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#0b0e17";
+  ctx.font = "900 28px Inter, system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(String(actor.index + 1), 66, 66);
+
+  // Horse name
+  ctx.fillStyle = "#f4f7ff";
+  ctx.font = "800 29px Inter, system-ui, sans-serif";
+  ctx.textAlign = "left";
+  const displayTitle = horseName.length > 18 ? horseName.slice(0, 17) + "…" : horseName;
+  ctx.fillText(displayTitle, 102, 65);
+
+  // Status right-aligned icon
+  ctx.textAlign = "right";
+  if (isFallen) {
+    ctx.fillStyle = "#ff6b8a";
+    ctx.font = "900 26px Inter, system-ui, sans-serif";
+    ctx.fillText("FELL!", 468, 66);
+  } else if (isBursting) {
+    ctx.fillStyle = "#ffd76a";
+    ctx.font = "900 30px Inter, system-ui, sans-serif";
+    ctx.fillText(">>>", 468, 66);
+  } else if (isLeader) {
+    ctx.font = "34px serif";
+    ctx.fillText("👑", 468, 66);
+  }
+
+  texture.needsUpdate = true;
+}
+
+/**
+ * Builds an articulated 3D Horse & Jockey actor facing +X in Y-up metre coordinates.
+ * Ground contact is at local Y = 0. Total height ~2.3m, length ~2.6m.
+ */
+function createHorseActor(index, silkColorHex) {
+  const coat = EQUINE_COATS[index % EQUINE_COATS.length];
+
+  const root = new THREE.Group();
+  root.name = `HorseActor_${index + 1}`;
+  root.position.set(0, 0, LANES_Z[index]);
+
+  // Body pivot at hip/chest level (Y = 1.15m) for pitch, bounce, and jump rotation
+  const bodyPivot = new THREE.Group();
+  bodyPivot.position.set(0, 1.15, 0);
+  root.add(bodyPivot);
+
+  // Shared PBR Materials
+  const coatMat = new THREE.MeshStandardMaterial({
+    color: coat.body,
+    roughness: 0.52,
+    metalness: 0.05
+  });
+  const maneMat = new THREE.MeshStandardMaterial({
+    color: coat.mane,
+    roughness: 0.78,
+    metalness: 0.02
+  });
+  const muzzleMat = new THREE.MeshStandardMaterial({
+    color: coat.muzzle,
+    roughness: 0.45
+  });
+  const sockMat = new THREE.MeshStandardMaterial({
+    color: coat.socks,
+    roughness: 0.6
+  });
+  const hoofMat = new THREE.MeshStandardMaterial({
+    color: coat.hooves,
+    roughness: 0.35,
+    metalness: 0.15
+  });
+  const leatherMat = new THREE.MeshStandardMaterial({
+    color: "#2b180c",
+    roughness: 0.42,
+    metalness: 0.12
+  });
+  const silkMat = new THREE.MeshStandardMaterial({
+    color: silkColorHex,
+    roughness: 0.32,
+    metalness: 0.12,
+    emissive: silkColorHex,
+    emissiveIntensity: 0.08
+  });
+  const breechesMat = new THREE.MeshStandardMaterial({
+    color: "#f2f4f8",
+    roughness: 0.55
+  });
+  const skinMat = new THREE.MeshStandardMaterial({
+    color: "#e0ac8b",
+    roughness: 0.55
+  });
+  const saddleClothMat = new THREE.MeshStandardMaterial({
+    map: makeSaddleNumberTexture(index + 1, silkColorHex),
+    roughness: 0.5
+  });
+
+  // 1. Torso Barrel (oriented along X)
+  const torsoGeo = new THREE.CapsuleGeometry(0.36, 0.92, 8, 16);
+  torsoGeo.rotateZ(Math.PI / 2);
+  const torso = new THREE.Mesh(torsoGeo, coatMat);
+  torso.castShadow = true;
+  torso.receiveShadow = true;
+  bodyPivot.add(torso);
+
+  // Chest & Hindquarters muscular volume spheres
+  const chestGeo = new THREE.SphereGeometry(0.39, 14, 12);
+  chestGeo.scale(1.15, 1.05, 0.96);
+  const chest = new THREE.Mesh(chestGeo, coatMat);
+  chest.position.set(0.45, 0.03, 0);
+  chest.castShadow = true;
+  bodyPivot.add(chest);
+
+  const croupGeo = new THREE.SphereGeometry(0.38, 14, 12);
+  croupGeo.scale(1.12, 1.05, 0.95);
+  const croup = new THREE.Mesh(croupGeo, coatMat);
+  croup.position.set(-0.48, 0.06, 0);
+  croup.castShadow = true;
+  bodyPivot.add(croup);
+
+  // Numbered Saddlecloth & Leather Saddle
+  const clothGeo = new THREE.BoxGeometry(0.68, 0.48, 0.78);
+  const saddleCloth = new THREE.Mesh(clothGeo, saddleClothMat);
+  saddleCloth.position.set(0.02, 0.19, 0);
+  saddleCloth.castShadow = true;
+  bodyPivot.add(saddleCloth);
+
+  const saddleGeo = new THREE.BoxGeometry(0.50, 0.14, 0.52);
+  const saddle = new THREE.Mesh(saddleGeo, leatherMat);
+  saddle.position.set(0.0, 0.36, 0);
+  bodyPivot.add(saddle);
+
+  // 2. Articulated Neck, Head, Mane & Bridle
+  const neckPivot = new THREE.Group();
+  neckPivot.position.set(0.62, 0.22, 0);
+  neckPivot.rotation.z = -0.58; // Angled forward and up
+  bodyPivot.add(neckPivot);
+
+  const neckGeo = new THREE.CylinderGeometry(0.15, 0.27, 0.86, 12);
+  const neckMesh = new THREE.Mesh(neckGeo, coatMat);
+  neckMesh.position.set(0, 0.38, 0);
+  neckMesh.castShadow = true;
+  neckPivot.add(neckMesh);
+
+  // Mane crest along back of neck
+  const maneGeo = new THREE.BoxGeometry(0.12, 0.80, 0.08);
+  const maneMesh = new THREE.Mesh(maneGeo, maneMat);
+  maneMesh.position.set(-0.14, 0.40, 0);
+  neckPivot.add(maneMesh);
+
+  // Head group at top of neck
+  const headPivot = new THREE.Group();
+  headPivot.position.set(0.05, 0.78, 0);
+  headPivot.rotation.z = 0.45;
+  neckPivot.add(headPivot);
+
+  const skullGeo = new THREE.BoxGeometry(0.42, 0.26, 0.26);
+  const skull = new THREE.Mesh(skullGeo, coatMat);
+  skull.position.set(0.12, 0, 0);
+  skull.castShadow = true;
+  headPivot.add(skull);
+
+  const snoutGeo = new THREE.CylinderGeometry(0.10, 0.14, 0.34, 10);
+  snoutGeo.rotateZ(-Math.PI / 2);
+  const snout = new THREE.Mesh(snoutGeo, muzzleMat);
+  snout.position.set(0.42, -0.03, 0);
+  snout.castShadow = true;
+  headPivot.add(snout);
+
+  // Blaze stripe on forehead
+  const blazeGeo = new THREE.BoxGeometry(0.32, 0.04, 0.08);
+  const blaze = new THREE.Mesh(blazeGeo, sockMat);
+  blaze.position.set(0.28, 0.12, 0);
+  blaze.rotation.z = -0.22;
+  headPivot.add(blaze);
+
+  // Silk Blinkers / Hood on horse head
+  const hoodGeo = new THREE.BoxGeometry(0.26, 0.28, 0.28);
+  const hood = new THREE.Mesh(hoodGeo, silkMat);
+  hood.position.set(0.08, 0.01, 0);
+  headPivot.add(hood);
+
+  // Ears
+  const earGeo = new THREE.ConeGeometry(0.045, 0.16, 6);
+  [-0.09, 0.09].forEach(zOff => {
+    const ear = new THREE.Mesh(earGeo, coatMat);
+    ear.position.set(-0.02, 0.20, zOff);
+    ear.rotation.z = -0.2;
+    headPivot.add(ear);
+  });
+
+  // 3. Articulated Tail
+  const tailPivot = new THREE.Group();
+  tailPivot.position.set(-0.84, 0.18, 0);
+  tailPivot.rotation.z = -0.65;
+  bodyPivot.add(tailPivot);
+
+  const tailGeo = new THREE.ConeGeometry(0.13, 0.85, 8);
+  tailGeo.rotateZ(Math.PI); // tip pointing down/back
+  const tailMesh = new THREE.Mesh(tailGeo, maneMat);
+  tailMesh.position.set(-0.12, -0.36, 0);
+  tailMesh.castShadow = true;
+  tailPivot.add(tailMesh);
+
+  // 4. Four Articulated Two-Segment Legs (FL, FR, BL, BR)
+  const legs = [];
+  const legConfigs = [
+    { name: "FL", x: 0.56, z: -0.20, phase: 0.0 },
+    { name: "FR", x: 0.56, z: 0.20, phase: 0.25 },
+    { name: "BL", x: -0.58, z: -0.21, phase: 0.52 },
+    { name: "BR", x: -0.58, z: 0.21, phase: 0.77 }
+  ];
+
+  const upperLegGeo = new THREE.CylinderGeometry(0.095, 0.072, 0.56, 8);
+  const lowerLegGeo = new THREE.CylinderGeometry(0.068, 0.052, 0.54, 8);
+  const hoofGeo = new THREE.CylinderGeometry(0.065, 0.082, 0.11, 8);
+
+  legConfigs.forEach(cfg => {
+    const shoulder = new THREE.Group();
+    shoulder.position.set(cfg.x, -0.10, cfg.z);
+    bodyPivot.add(shoulder);
+
+    const upperMesh = new THREE.Mesh(upperLegGeo, coatMat);
+    upperMesh.position.set(0, -0.26, 0);
+    upperMesh.castShadow = true;
+    shoulder.add(upperMesh);
+
+    const knee = new THREE.Group();
+    knee.position.set(0, -0.52, 0);
+    shoulder.add(knee);
+
+    const lowerMesh = new THREE.Mesh(lowerLegGeo, sockMat);
+    lowerMesh.position.set(0, -0.25, 0);
+    lowerMesh.castShadow = true;
+    knee.add(lowerMesh);
+
+    const hoofMesh = new THREE.Mesh(hoofGeo, hoofMat);
+    hoofMesh.position.set(0.02, -0.52, 0);
+    knee.add(hoofMesh);
+
+    legs.push({
+      name: cfg.name,
+      isFront: cfg.x > 0,
+      phase: cfg.phase,
+      shoulder,
+      knee
+    });
+  });
+
+  // 5. Jockey Assembly crouched in racing stance
+  const jockeyPivot = new THREE.Group();
+  jockeyPivot.position.set(0.06, 0.44, 0);
+  bodyPivot.add(jockeyPivot);
+
+  // Jockey torso leaning forward
+  const jTorsoPivot = new THREE.Group();
+  jTorsoPivot.rotation.z = -0.78;
+  jockeyPivot.add(jTorsoPivot);
+
+  const jTorsoGeo = new THREE.CapsuleGeometry(0.16, 0.34, 6, 10);
+  const jTorso = new THREE.Mesh(jTorsoGeo, silkMat);
+  jTorso.position.set(0, 0.26, 0);
+  jTorso.castShadow = true;
+  jTorsoPivot.add(jTorso);
+
+  // Jockey head & silk helmet
+  const jHeadGroup = new THREE.Group();
+  jHeadGroup.position.set(0.06, 0.56, 0);
+  jHeadGroup.rotation.z = 0.65;
+  jTorsoPivot.add(jHeadGroup);
+
+  const jFace = new THREE.Mesh(new THREE.SphereGeometry(0.115, 10, 10), skinMat);
+  jHeadGroup.add(jFace);
+
+  const helmetGeo = new THREE.SphereGeometry(0.13, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.65);
+  const helmet = new THREE.Mesh(helmetGeo, silkMat);
+  helmet.position.set(-0.01, 0.02, 0);
+  helmet.castShadow = true;
+  jHeadGroup.add(helmet);
+
+  // Helmet visor peak
+  const visor = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.025, 0.16), leatherMat);
+  visor.position.set(0.11, 0.03, 0);
+  jHeadGroup.add(visor);
+
+  // Jockey arms reaching toward reins
+  const armGeo = new THREE.CapsuleGeometry(0.048, 0.34, 4, 8);
+  armGeo.rotateZ(Math.PI / 2);
+  [-0.17, 0.17].forEach(zOff => {
+    const arm = new THREE.Mesh(armGeo, silkMat);
+    arm.position.set(0.22, 0.34, zOff);
+    arm.rotation.z = -0.25;
+    jTorsoPivot.add(arm);
+
+    // Thighs & boots in stirrups
+    const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.065, 0.24, 4, 8), breechesMat);
+    thigh.position.set(-0.04, -0.02, zOff * 1.35);
+    thigh.rotation.z = 0.55;
+    jockeyPivot.add(thigh);
+
+    const boot = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.045, 0.26, 8), leatherMat);
+    boot.position.set(-0.12, -0.22, zOff * 1.45);
+    boot.rotation.z = -0.35;
+    jockeyPivot.add(boot);
+  });
+
+  // 6. 3D Golden Leader Crown (visible when currentLeader === index)
+  const crownGroup = new THREE.Group();
+  crownGroup.position.set(0.2, 2.55, 0);
+  crownGroup.visible = false;
+  root.add(crownGroup);
+
+  const crownMat = new THREE.MeshStandardMaterial({
+    color: "#ffd76a",
+    emissive: "#ffb300",
+    emissiveIntensity: 0.45,
+    metalness: 0.85,
+    roughness: 0.18
+  });
+  const crownRing = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.19, 0.18, 6, 1, false), crownMat);
+  crownGroup.add(crownRing);
+
+  // 7. Floating Nameplate Sprite above horse
+  const labelData = makeNameplateCanvas();
+  const spriteMat = new THREE.SpriteMaterial({
+    map: labelData.texture,
+    transparent: true,
+    depthTest: false
+  });
+  const labelSprite = new THREE.Sprite(spriteMat);
+  labelSprite.position.set(0.0, 2.95, 0);
+  labelSprite.scale.set(2.9, 0.72, 1);
+  labelSprite.renderOrder = 10;
+  root.add(labelSprite);
+
+  return {
+    index,
+    silkColor: silkColorHex,
+    root,
+    bodyPivot,
+    neckPivot,
+    headPivot,
+    tailPivot,
+    jockeyPivot,
+    jTorsoPivot,
+    crownGroup,
+    labelSprite,
+    labelData,
+    lastLabelState: "",
+    legs,
+    gaitPhase: index * 1.35,
+    stumbleTilt: 0,
+    lastHoofCycle: -1
+  };
+}
+
+/**
+ * Frame-rate-independent procedural animation update for an individual horse actor.
+ */
+function updateHorseActorAnimation(actor, horseState, modelState, simContext, dt, nowMs) {
+  const { isRacing, isJumpActive, jumpT, isFallen, isLeader, windForce } = simContext;
+
+  // Convert simulation X coordinate into 3D metres
+  const worldX = horseState.x * SIM_TO_M;
+  actor.root.position.x = worldX;
+  actor.root.position.z = LANES_Z[actor.index];
+
+  // Speed ratio (typical sim speed is 80..210 px/s)
+  const speedPx = isRacing && !isFallen ? clamp(modelState.momentum || horseState.speed || 115, 0, 230) : 0;
+  const speedNorm = clamp(speedPx / 135, 0, 1.85);
+
+  // Advance gait cycle phase proportional to real elapsed time and speed
+  if (isRacing && !isFallen) {
+    actor.gaitPhase += dt * (7.5 + speedNorm * 8.2);
+  } else if (!isFallen) {
+    // Idle breathing / pawing phase
+    actor.gaitPhase += dt * 1.8;
+  }
+
+  const p = actor.gaitPhase;
+
+  // Jump vertical elevation & body pitch kinematics
+  let jumpY = 0;
+  let targetPitch = 0;
+
+  if (isJumpActive && !isFallen) {
+    // Smooth parabolic trajectory over hedge
+    const arc = Math.sin(jumpT * Math.PI);
+    jumpY = arc * (JUMP_H * 0.082); // ~1.8m peak height in 3D
+    // Pitch nose up on takeoff (+0.48 rad), level at apex, pitch nose down on landing (-0.38 rad)
+    targetPitch = Math.cos(jumpT * Math.PI) * 0.44;
+  } else if (isRacing && !isFallen) {
+    // Gallop suspension bounce & subtle rocking pitch
+    jumpY = Math.abs(Math.sin(p)) * 0.14 * clamp(speedNorm, 0.4, 1.4);
+    targetPitch = Math.cos(p) * 0.09 * clamp(speedNorm, 0.4, 1.3);
+  } else if (!isFallen) {
+    // Idle breathing bob
+    jumpY = Math.sin(p) * 0.025;
+    targetPitch = Math.sin(p * 0.5) * 0.02;
+  }
+
+  // Handle Stumble / Pull-up animation
+  if (isFallen) {
+    actor.stumbleTilt = lerp(actor.stumbleTilt, 1.0, clamp(dt * 5.0, 0, 1));
+    actor.bodyPivot.position.y = lerp(1.15, 0.68, actor.stumbleTilt);
+    actor.bodyPivot.rotation.z = lerp(actor.bodyPivot.rotation.z, -0.35, clamp(dt * 6, 0, 1));
+    actor.bodyPivot.rotation.x = lerp(actor.bodyPivot.rotation.x, 0.55, clamp(dt * 6, 0, 1));
+    actor.neckPivot.rotation.z = -0.25 + Math.sin(nowMs * 0.008) * 0.12;
+  } else {
+    actor.stumbleTilt = 0;
+    actor.bodyPivot.position.y = 1.15 + jumpY;
+    actor.bodyPivot.rotation.z = lerp(actor.bodyPivot.rotation.z, targetPitch, clamp(dt * 16, 0, 1));
+    actor.bodyPivot.rotation.x = 0;
+
+    // Neck and Jockey rhythm
+    if (isRacing) {
+      const neckSwing = Math.sin(p - 0.6) * 0.18 * clamp(speedNorm, 0.5, 1.4);
+      actor.neckPivot.rotation.z = -0.58 + neckSwing - (modelState.boostT > 0 ? 0.12 : 0);
+      actor.headPivot.rotation.z = 0.45 - neckSwing * 0.6;
+      actor.jockeyPivot.position.y = 0.44 + Math.sin(p * 2) * 0.04;
+      actor.jTorsoPivot.rotation.z = -0.78 - (modelState.boostT > 0 ? 0.20 : 0) + Math.sin(p) * 0.07;
+    } else {
+      actor.neckPivot.rotation.z = -0.54 + Math.sin(p) * 0.05;
+      actor.headPivot.rotation.z = 0.42 + Math.cos(p * 0.7) * 0.05;
+      actor.jTorsoPivot.rotation.z = -0.62;
+    }
+  }
+
+  // Tail streaming in gallop + windForce lateral sway
+  const tailSpeedLift = isRacing && !isFallen ? clamp(speedNorm * 0.55, 0, 0.75) : 0.05;
+  actor.tailPivot.rotation.z = -0.65 + tailSpeedLift + Math.sin(p * 1.5) * 0.14;
+  actor.tailPivot.rotation.x = clamp((windForce || 0) * 0.06, -0.35, 0.35) + Math.cos(p) * 0.06;
+
+  // 4-Beat Articulated Leg Kinematics
+  actor.legs.forEach(leg => {
+    const legAnglePhase = p + leg.phase * Math.PI * 2;
+    if (isJumpActive && !isFallen) {
+      // Forelegs tuck forward and fold at the knee; hindlegs push back then tuck
+      if (leg.isFront) {
+        leg.shoulder.rotation.z = 0.75;
+        leg.knee.rotation.z = -1.35;
+      } else {
+        const pushToTuck = lerp(-0.85, 0.45, jumpT);
+        leg.shoulder.rotation.z = pushToTuck;
+        leg.knee.rotation.z = lerp(0.2, 1.0, jumpT);
+      }
+    } else if (isRacing && !isFallen) {
+      const amp = 0.72 * clamp(speedNorm, 0.55, 1.35);
+      const sRot = Math.sin(legAnglePhase) * amp;
+      leg.shoulder.rotation.z = sRot;
+
+      // Knee bends naturally during the recovery forward swing
+      const bend = Math.max(0, Math.cos(legAnglePhase));
+      leg.knee.rotation.z = leg.isFront ? -bend * 1.12 : bend * 0.95;
+    } else if (isFallen) {
+      leg.shoulder.rotation.z = leg.isFront ? 0.65 : -0.65;
+      leg.knee.rotation.z = leg.isFront ? -1.1 : 0.9;
+    } else {
+      // Idle standing stance
+      leg.shoulder.rotation.z = Math.sin(legAnglePhase) * 0.04;
+      leg.knee.rotation.z = 0;
+    }
+  });
+
+  // Leader Crown rotation & visibility
+  const showCrown = isLeader && !isFallen && simContext.hasStarted;
+  actor.crownGroup.visible = showCrown;
+  if (showCrown) {
+    actor.crownGroup.rotation.y += dt * 2.6;
+    actor.crownGroup.position.y = 2.55 + jumpY + Math.sin(nowMs * 0.006) * 0.07;
+  }
+
+  // Update overhead nameplate sprite
+  actor.labelSprite.position.y = 2.95 + jumpY * 0.75;
+  updateNameplateSprite(
+    actor,
+    horseState.name,
+    actor.silkColor,
+    showCrown,
+    modelState.boostT > 0 && !isFallen,
+    isFallen
+  );
+
+  // Detect hoof strike event once per stride cycle for audio & turf particles
+  const currentCycle = Math.floor(p / (Math.PI * 2));
+  let hoofStrike = false;
+  if (isRacing && !isFallen && !isJumpActive && currentCycle > actor.lastHoofCycle) {
+    actor.lastHoofCycle = currentCycle;
+    hoofStrike = true;
+  }
+
+  return { hoofStrike, worldX, jumpY };
+}
+
+
+/* --- MODULE: track3d.js --- */
+/* ============================================================================
+ * Horse Rally 3D — Procedural 3D Racecourse, Starting Stalls, Hedges & Grandstand
+ * Skills: threejs-procedural-geometry, threejs-procedural-vegetation
+ * ============================================================================ */
+
+
+/**
+ * Generates a procedural striped turf & worn running lane texture
+ */
+function createTurfCanvasTexture() {
+  const c = document.createElement("canvas");
+  c.width = 512;
+  c.height = 512;
+  const ctx = c.getContext("2d");
+
+  // Two-tone mowed turf lawn stripes along X
+  ctx.fillStyle = "#1f6e32";
+  ctx.fillRect(0, 0, 256, 512);
+  ctx.fillStyle = "#257d3b";
+  ctx.fillRect(256, 0, 256, 512);
+
+  // Subtle organic turf grain
+  for (let i = 0; i < 3500; i++) {
+    const x = Math.random() * 512;
+    const y = Math.random() * 512;
+    ctx.fillStyle = Math.random() > 0.5 ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.06)";
+    ctx.fillRect(x, y, 3, 2);
+  }
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(60, 8);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function createCheckeredTexture() {
+  const c = document.createElement("canvas");
+  c.width = 64;
+  c.height = 256;
+  const ctx = c.getContext("2d");
+  const size = 32;
+  for (let y = 0; y < 256; y += size) {
+    for (let x = 0; x < 64; x += size) {
+      const even = ((x / size) + (y / size)) % 2 === 0;
+      ctx.fillStyle = even ? "#ffffff" : "#12151f";
+      ctx.fillRect(x, y, size, size);
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(1, 3);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function createBannerTexture(text, bgHex = "#102048", accentHex = "#e5c158") {
+  const c = document.createElement("canvas");
+  c.width = 512;
+  c.height = 96;
+  const ctx = c.getContext("2d");
+
+  ctx.fillStyle = bgHex;
+  ctx.fillRect(0, 0, 512, 96);
+  ctx.strokeStyle = accentHex;
+  ctx.lineWidth = 8;
+  ctx.strokeRect(4, 4, 504, 88);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "900 40px Inter, system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, 256, 50);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+class RacecourseBuilder {
+  constructor(scene) {
+    this.scene = scene;
+    this.trackGroup = new THREE.Group();
+    this.trackGroup.name = "RacecourseGroup";
+    this.scene.add(this.trackGroup);
+
+    this.turfTexture = createTurfCanvasTexture();
+    this.checkeredTexture = createCheckeredTexture();
+
+    this.turfMaterial = new THREE.MeshStandardMaterial({
+      map: this.turfTexture,
+      roughness: 0.85,
+      metalness: 0.04
+    });
+
+    this.infieldMaterial = new THREE.MeshStandardMaterial({
+      color: "#154f24",
+      roughness: 0.92,
+      metalness: 0.02
+    });
+
+    this.railMaterial = new THREE.MeshStandardMaterial({
+      color: "#f4f7ff",
+      roughness: 0.35,
+      metalness: 0.1
+    });
+
+    this.hedgeFoliageMaterial = new THREE.MeshStandardMaterial({
+      color: "#165c29",
+      roughness: 0.82
+    });
+
+    this.takeoffBarMaterial = new THREE.MeshStandardMaterial({
+      color: "#f59e0b",
+      roughness: 0.4
+    });
+
+    this.stallGates = [];
+    this.treeCrownsMesh = null;
+    this.treeCrownBaseMatrices = [];
+    this.grassBladesMesh = null;
+    this.furlongFlags = [];
+  }
+
+  /**
+   * Rebuilds the 3D racecourse geometry whenever race distance or Flat/Hedges mode changes.
+   */
+  buildCourse({ raceFurlongs, finishSimX, hedgesSimX, useHedges }) {
+    // Clear existing children
+    while (this.trackGroup.children.length > 0) {
+      const child = this.trackGroup.children[0];
+      this.trackGroup.remove(child);
+    }
+    this.stallGates = [];
+    this.treeCrownBaseMatrices = [];
+    this.furlongFlags = [];
+
+    const startM = START_X * SIM_TO_M;
+    const finishM = finishSimX * SIM_TO_M;
+    const raceLengthM = finishM - startM;
+    const totalCourseLength = finishM + 140;
+    const trackWidth = 15.5; // 5 lanes (-5..+5) plus margins
+
+    // 1. Main Striped Racecourse Turf Strip
+    this.turfTexture.repeat.set(Math.round(totalCourseLength / 14), 1);
+    const trackGeo = new THREE.PlaneGeometry(totalCourseLength + 80, trackWidth, 64, 8);
+    trackGeo.rotateX(-Math.PI / 2);
+    const trackMesh = new THREE.Mesh(trackGeo, this.turfMaterial);
+    trackMesh.position.set(totalCourseLength * 0.5 - 20, 0, 0);
+    trackMesh.receiveShadow = true;
+    this.trackGroup.add(trackMesh);
+
+    // 2. Surrounding Infield & Paddock Ground Plane
+    const surroundGeo = new THREE.PlaneGeometry(totalCourseLength + 600, 360);
+    surroundGeo.rotateX(-Math.PI / 2);
+    const surroundMesh = new THREE.Mesh(surroundGeo, this.infieldMaterial);
+    surroundMesh.position.set(totalCourseLength * 0.5, -0.03, 0);
+    surroundMesh.receiveShadow = true;
+    this.trackGroup.add(surroundMesh);
+
+    // 3. Dashed White Lane Dividers between the 5 lanes
+    const laneLineMat = new THREE.MeshBasicMaterial({
+      color: "#ffffff",
+      transparent: true,
+      opacity: 0.25
+    });
+    for (let i = 0; i < LANES_Z.length - 1; i++) {
+      const midZ = (LANES_Z[i] + LANES_Z[i + 1]) * 0.5;
+      const lineGeo = new THREE.PlaneGeometry(raceLengthM + 20, 0.08);
+      lineGeo.rotateX(-Math.PI / 2);
+      const lineMesh = new THREE.Mesh(lineGeo, laneLineMat);
+      lineMesh.position.set(startM + raceLengthM * 0.5, 0.012, midZ);
+      this.trackGroup.add(lineMesh);
+    }
+
+    // 4. Start & Finish Checkered Ground Strips
+    const stripGeo = new THREE.PlaneGeometry(1.1, trackWidth - 0.6);
+    stripGeo.rotateX(-Math.PI / 2);
+    const stripMat = new THREE.MeshStandardMaterial({
+      map: this.checkeredTexture,
+      roughness: 0.6
+    });
+
+    const startStrip = new THREE.Mesh(stripGeo, stripMat);
+    startStrip.position.set(startM, 0.018, 0);
+    this.trackGroup.add(startStrip);
+
+    const finishStrip = new THREE.Mesh(stripGeo, stripMat);
+    finishStrip.position.set(finishM, 0.02, 0);
+    this.trackGroup.add(finishStrip);
+
+    // 5. Continuous Post-and-Rail Perimeter Fences (North Z = -7.6m, South Z = +7.6m)
+    this._buildPerimeterRails(totalCourseLength, 7.6);
+
+    // 6. 5-Bay Starting Stalls with Animated Front Gates at startM
+    this._buildStartingStalls(startM);
+
+    // 7. Finish Archway & Photo-Finish Tower at finishM
+    this._buildFinishGantry(finishM, trackWidth);
+
+    // 8. Furlong Distance Marker Poles along the inner rail
+    this._buildFurlongMarkers(startM, finishM, raceFurlongs);
+
+    // 9. 3D Steeplechase Hedges (when useHedges === true)
+    if (useHedges && hedgesSimX.length > 0) {
+      this._buildSteeplechaseHedges(hedgesSimX, trackWidth);
+    }
+
+    // 10. Grandstand & Crowd along the Final Furlong
+    this._buildGrandstand(finishM);
+
+    // 11. Instanced 3D Turf Grass Tuft Clusters & Perimeter Trees (threejs-procedural-vegetation)
+    this._buildVegetation(totalCourseLength);
+  }
+
+  _buildPerimeterRails(totalLength, halfWidth) {
+    // Horizontal top rails
+    const railLen = totalLength + 40;
+    const railGeo = new THREE.BoxGeometry(railLen, 0.10, 0.08);
+    [-halfWidth, halfWidth].forEach(zPos => {
+      const topRail = new THREE.Mesh(railGeo, this.railMaterial);
+      topRail.position.set(railLen * 0.5 - 20, 1.08, zPos);
+      topRail.castShadow = true;
+      this.trackGroup.add(topRail);
+    });
+
+    // Instanced vertical fence posts every 3.5 metres
+    const postSpacing = 3.5;
+    const postsPerSide = Math.floor(railLen / postSpacing);
+    const postGeo = new THREE.BoxGeometry(0.11, 1.15, 0.11);
+    const postInst = new THREE.InstancedMesh(postGeo, this.railMaterial, postsPerSide * 2);
+    postInst.castShadow = true;
+
+    const dummy = new THREE.Object3D();
+    let idx = 0;
+    for (let i = 0; i < postsPerSide; i++) {
+      const x = -20 + i * postSpacing;
+      dummy.position.set(x, 0.57, -halfWidth);
+      dummy.updateMatrix();
+      postInst.setMatrixAt(idx++, dummy.matrix);
+
+      dummy.position.set(x, 0.57, halfWidth);
+      dummy.updateMatrix();
+      postInst.setMatrixAt(idx++, dummy.matrix);
+    }
+    postInst.instanceMatrix.needsUpdate = true;
+    this.trackGroup.add(postInst);
+  }
+
+  _buildStartingStalls(startM) {
+    const stallGroup = new THREE.Group();
+    stallGroup.position.set(startM - 1.1, 0, 0);
+
+    const frameMat = new THREE.MeshStandardMaterial({
+      color: "#1b315e",
+      metalness: 0.55,
+      roughness: 0.35
+    });
+    const gateMat = new THREE.MeshStandardMaterial({
+      color: "#dce4f5",
+      metalness: 0.4,
+      roughness: 0.4
+    });
+
+    // Overhead header truss spanning all 5 stalls
+    const totalStallSpan = 13.4;
+    const headerBeam = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.32, totalStallSpan), frameMat);
+    headerBeam.position.set(0, 2.75, 0);
+    headerBeam.castShadow = true;
+    stallGroup.add(headerBeam);
+
+    // Top banner sign
+    const signBanner = new THREE.Mesh(
+      new THREE.BoxGeometry(0.14, 0.65, 8.5),
+      new THREE.MeshStandardMaterial({ map: createBannerTexture("STARTING STALLS", "#101b3b", "#56f0c1") })
+    );
+    signBanner.position.set(1.28, 3.25, 0);
+    stallGroup.add(signBanner);
+
+    // Dividers and swinging front gates for each of the 5 lanes
+    const dividerWallGeo = new THREE.BoxGeometry(2.6, 2.1, 0.10);
+    const pillarGeo = new THREE.CylinderGeometry(0.08, 0.08, 2.75, 8);
+
+    for (let i = 0; i <= NUM_HORSES; i++) {
+      const zDiv = -6.25 + i * 2.5;
+      const wall = new THREE.Mesh(dividerWallGeo, frameMat);
+      wall.position.set(0, 1.15, zDiv);
+      wall.castShadow = true;
+      stallGroup.add(wall);
+
+      const frontPillar = new THREE.Mesh(pillarGeo, frameMat);
+      frontPillar.position.set(1.25, 1.37, zDiv);
+      stallGroup.add(frontPillar);
+    }
+
+    // Swinging double doors per lane
+    const doorGeo = new THREE.BoxGeometry(0.07, 1.85, 1.10);
+    LANES_Z.forEach((laneZ) => {
+      const leftHinge = new THREE.Group();
+      leftHinge.position.set(1.25, 1.25, laneZ - 1.15);
+      const leftDoor = new THREE.Mesh(doorGeo, gateMat);
+      leftDoor.position.set(0, 0, 0.55);
+      leftHinge.add(leftDoor);
+      stallGroup.add(leftHinge);
+
+      const rightHinge = new THREE.Group();
+      rightHinge.position.set(1.25, 1.25, laneZ + 1.15);
+      const rightDoor = new THREE.Mesh(doorGeo, gateMat);
+      rightDoor.position.set(0, 0, -0.55);
+      rightHinge.add(rightDoor);
+      stallGroup.add(rightHinge);
+
+      this.stallGates.push({ leftHinge, rightHinge });
+    });
+
+    this.trackGroup.add(stallGroup);
+  }
+
+  setStartingGatesOpen(openProgress) {
+    // openProgress: 0 (closed) -> 1 (flung open 88 degrees forward)
+    const angle = openProgress * 1.52;
+    this.stallGates.forEach(g => {
+      g.leftHinge.rotation.y = angle;
+      g.rightHinge.rotation.y = -angle;
+    });
+  }
+
+  _buildFinishGantry(finishM, trackWidth) {
+    const gantry = new THREE.Group();
+    gantry.position.set(finishM, 0, 0);
+
+    const postMat = new THREE.MeshStandardMaterial({
+      color: "#d92b4b",
+      roughness: 0.3,
+      metalness: 0.25
+    });
+    const goldMat = new THREE.MeshStandardMaterial({
+      color: "#ffd76a",
+      roughness: 0.25,
+      metalness: 0.75
+    });
+
+    const spanZ = trackWidth * 0.5 + 0.5;
+    [-spanZ, spanZ].forEach(zSide => {
+      const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.20, 4.6, 12), postMat);
+      pillar.position.set(0, 2.3, zSide);
+      pillar.castShadow = true;
+      gantry.add(pillar);
+
+      const finial = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 12), goldMat);
+      finial.position.set(0, 4.75, zSide);
+      gantry.add(finial);
+    });
+
+    // Overhead Finish Banner
+    const bannerTex = createBannerTexture("🏁 FINISH LINE 🏁", "#131c38", "#ffd76a");
+    const bannerMat = new THREE.MeshStandardMaterial({ map: bannerTex, roughness: 0.4 });
+    const bannerBox = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.92, spanZ * 2 + 0.4), bannerMat);
+    bannerBox.position.set(0, 4.25, 0);
+    bannerBox.castShadow = true;
+    gantry.add(bannerBox);
+
+    this.trackGroup.add(gantry);
+  }
+
+  _buildFurlongMarkers(startM, finishM, raceFurlongs) {
+    const poleGeo = new THREE.CylinderGeometry(0.05, 0.05, 1.9, 8);
+    const flagGeo = new THREE.PlaneGeometry(0.75, 0.42, 4, 1);
+    flagGeo.translate(0.375, 0, 0);
+
+    for (let f = 1; f < raceFurlongs; f++) {
+      const distFromFinishFurlongs = raceFurlongs - f;
+      const xPos = startM + f * PX_PER_FURLONG * SIM_TO_M;
+      if (xPos >= finishM - 4) continue;
+
+      const pole = new THREE.Mesh(poleGeo, this.railMaterial);
+      pole.position.set(xPos, 0.95, -7.85);
+      this.trackGroup.add(pole);
+
+      const flagMat = new THREE.MeshStandardMaterial({
+        map: createBannerTexture(`${distFromFinishFurlongs}F`, "#b91c1c", "#ffffff"),
+        side: THREE.DoubleSide
+      });
+      const flag = new THREE.Mesh(flagGeo, flagMat);
+      flag.position.set(xPos, 1.72, -7.85);
+      this.trackGroup.add(flag);
+      this.furlongFlags.push(flag);
+    }
+  }
+
+  _buildSteeplechaseHedges(hedgesSimX, trackWidth) {
+    const hedgeWidth = trackWidth - 1.2;
+    const baseBoxGeo = new THREE.BoxGeometry(1.15, 1.05, hedgeWidth);
+    const topRollGeo = new THREE.CylinderGeometry(0.58, 0.58, hedgeWidth, 12);
+    topRollGeo.rotateX(Math.PI / 2);
+    const takeoffBarGeo = new THREE.CylinderGeometry(0.09, 0.09, hedgeWidth + 0.15, 10);
+    takeoffBarGeo.rotateX(Math.PI / 2);
+
+    hedgesSimX.forEach(hx => {
+      const xM = hx * SIM_TO_M;
+      const hGroup = new THREE.Group();
+      hGroup.position.set(xM, 0, 0);
+
+      const baseMesh = new THREE.Mesh(baseBoxGeo, this.hedgeFoliageMaterial);
+      baseMesh.position.set(0, 0.52, 0);
+      baseMesh.castShadow = true;
+      baseMesh.receiveShadow = true;
+      hGroup.add(baseMesh);
+
+      const topRoll = new THREE.Mesh(topRollGeo, this.hedgeFoliageMaterial);
+      topRoll.position.set(0, 1.05, 0);
+      topRoll.castShadow = true;
+      hGroup.add(topRoll);
+
+      // Sloped orange/white timber takeoff guard bar on approach side
+      const bar = new THREE.Mesh(takeoffBarGeo, this.takeoffBarMaterial);
+      bar.position.set(-0.62, 0.42, 0);
+      bar.castShadow = true;
+      hGroup.add(bar);
+
+      // White wing standards on left and right edges of the jump
+      [-hedgeWidth * 0.5, hedgeWidth * 0.5].forEach(zEdge => {
+        const wing = new THREE.Mesh(new THREE.BoxGeometry(1.35, 1.35, 0.14), this.railMaterial);
+        wing.position.set(0, 0.67, zEdge);
+        hGroup.add(wing);
+      });
+
+      this.trackGroup.add(hGroup);
+    });
+  }
+
+  _buildGrandstand(finishM) {
+    // Low-poly Royal Turf Club Grandstand lining the North infield side near the finish line
+    const standLen = 58;
+    const standGroup = new THREE.Group();
+    standGroup.position.set(finishM - standLen * 0.42, 0, -17.5);
+
+    const concreteMat = new THREE.MeshStandardMaterial({ color: "#1d263b", roughness: 0.7 });
+    const roofMat = new THREE.MeshStandardMaterial({ color: "#0e4f28", roughness: 0.45, metalness: 0.2 });
+    const brassTrimMat = new THREE.MeshStandardMaterial({ color: "#e5c158", metalness: 0.6, roughness: 0.3 });
+
+    // 4 stepped spectator tiers
+    for (let t = 0; t < 4; t++) {
+      const tier = new THREE.Mesh(
+        new THREE.BoxGeometry(standLen, 1.15, 2.2),
+        concreteMat
+      );
+      tier.position.set(0, 0.58 + t * 1.05, -t * 1.9);
+      tier.castShadow = true;
+      tier.receiveShadow = true;
+      standGroup.add(tier);
+    }
+
+    // Back wall & cantilevered canopy roof
+    const backWall = new THREE.Mesh(new THREE.BoxGeometry(standLen, 7.2, 0.8), concreteMat);
+    backWall.position.set(0, 3.6, -7.6);
+    backWall.castShadow = true;
+    standGroup.add(backWall);
+
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(standLen + 2, 0.45, 11.5), roofMat);
+    roof.position.set(0, 7.35, -3.2);
+    roof.rotation.x = 0.08;
+    roof.castShadow = true;
+    standGroup.add(roof);
+
+    const fascia = new THREE.Mesh(new THREE.BoxGeometry(standLen + 2.1, 0.28, 0.25), brassTrimMat);
+    fascia.position.set(0, 7.1, 2.5);
+    standGroup.add(fascia);
+
+    // Instanced colorful spectator dots seated along the tiers
+    const crowdCount = 220;
+    const personGeo = new THREE.BoxGeometry(0.42, 0.75, 0.42);
+    const personMat = new THREE.MeshStandardMaterial({ roughness: 0.6 });
+    const crowdInst = new THREE.InstancedMesh(personGeo, personMat, crowdCount);
+    const dummy = new THREE.Object3D();
+    const palette = [
+      new THREE.Color("#ff526d"),
+      new THREE.Color("#61a0ff"),
+      new THREE.Color("#ffd85a"),
+      new THREE.Color("#56f0c1"),
+      new THREE.Color("#f070ff"),
+      new THREE.Color("#ffffff")
+    ];
+
+    for (let i = 0; i < crowdCount; i++) {
+      const tierIdx = i % 4;
+      const xOff = ((i / crowdCount) - 0.5) * (standLen - 3);
+      dummy.position.set(xOff, 1.35 + tierIdx * 1.05, -tierIdx * 1.9 + 0.35);
+      dummy.updateMatrix();
+      crowdInst.setMatrixAt(i, dummy.matrix);
+      crowdInst.setColorAt(i, palette[i % palette.length]);
+    }
+    crowdInst.instanceMatrix.needsUpdate = true;
+    if (crowdInst.instanceColor) crowdInst.instanceColor.needsUpdate = true;
+    standGroup.add(crowdInst);
+
+    this.trackGroup.add(standGroup);
+  }
+
+  _buildVegetation(totalCourseLength) {
+    // 1. Instanced Perimeter Trees along the infield & backdrop
+    const treeCount = Math.min(90, Math.max(36, Math.floor(totalCourseLength / 10)));
+    const trunkGeo = new THREE.CylinderGeometry(0.22, 0.34, 2.2, 7);
+    const trunkMat = new THREE.MeshStandardMaterial({ color: "#4a321f", roughness: 0.9 });
+    const crownGeo = new THREE.DodecahedronGeometry(1.75, 1);
+    const crownMat = new THREE.MeshStandardMaterial({ color: "#1c6b31", roughness: 0.78 });
+
+    const trunksMesh = new THREE.InstancedMesh(trunkGeo, trunkMat, treeCount);
+    const crownsMesh = new THREE.InstancedMesh(crownGeo, crownMat, treeCount);
+    trunksMesh.castShadow = true;
+    crownsMesh.castShadow = true;
+
+    const dummy = new THREE.Object3D();
+    for (let i = 0; i < treeCount; i++) {
+      const side = i % 2 === 0 ? -1 : 1;
+      const x = (i / treeCount) * (totalCourseLength + 40) - 10;
+      const z = side * (11.5 + ((i * 7) % 14));
+      // Leave clearing in front of grandstand
+      const isGrandstandZone = side < 0 && x > totalCourseLength - 210 && x < totalCourseLength - 135;
+      const finalZ = isGrandstandZone ? z - 18 : z;
+      const scale = 0.8 + ((i * 13) % 7) * 0.12;
+
+      dummy.position.set(x, 1.1 * scale, finalZ);
+      dummy.scale.set(scale, scale, scale);
+      dummy.rotation.set(0, i * 1.1, 0);
+      dummy.updateMatrix();
+      trunksMesh.setMatrixAt(i, dummy.matrix);
+
+      dummy.position.set(x, 2.85 * scale, finalZ);
+      dummy.scale.set(scale, scale * 1.22, scale);
+      dummy.updateMatrix();
+      crownsMesh.setMatrixAt(i, dummy.matrix);
+      this.treeCrownBaseMatrices.push({
+        x,
+        y: 2.85 * scale,
+        z: finalZ,
+        scale,
+        phase: i * 0.7
+      });
+    }
+    trunksMesh.instanceMatrix.needsUpdate = true;
+    crownsMesh.instanceMatrix.needsUpdate = true;
+    this.treeCrownsMesh = crownsMesh;
+    this.trackGroup.add(trunksMesh);
+    this.trackGroup.add(crownsMesh);
+  }
+
+  /**
+   * Animates rooted wind deformation on tree canopies and furlong flags
+   */
+  updateVegetationWind(nowSec, windForce) {
+    const w = windForce || 0;
+    if (this.treeCrownsMesh && this.treeCrownBaseMatrices.length > 0) {
+      const dummy = new THREE.Object3D();
+      for (let i = 0; i < this.treeCrownBaseMatrices.length; i++) {
+        const b = this.treeCrownBaseMatrices[i];
+        const gust = Math.sin(nowSec * 2.2 + b.phase) * (0.04 + Math.abs(w) * 0.025);
+        const leanX = w * 0.08 + gust;
+        dummy.position.set(b.x + leanX * 0.45, b.y, b.z);
+        dummy.scale.set(b.scale, b.scale * 1.22, b.scale);
+        dummy.rotation.set(0, b.phase, -leanX * 0.35);
+        dummy.updateMatrix();
+        this.treeCrownsMesh.setMatrixAt(i, dummy.matrix);
+      }
+      this.treeCrownsMesh.instanceMatrix.needsUpdate = true;
+    }
+
+    this.furlongFlags.forEach((flag, idx) => {
+      flag.rotation.y = Math.sin(nowSec * 6.0 + idx) * (0.12 + Math.abs(w) * 0.06);
+    });
+  }
+}
+
+
+/* --- MODULE: weather3d.js --- */
+/* ============================================================================
+ * Horse Rally 3D — Coupled Precipitation, Wind & Surface Wetness System
+ * Skill: threejs-precipitation-surfaces
+ * ============================================================================ */
+
+
+class WeatherSystem3D {
+  constructor(scene, racecourseBuilder) {
+    this.scene = scene;
+    this.course = racecourseBuilder;
+
+    this.rainCount = 650;
+    this.rainVolume = { width: 46, height: 18, depth: 26 };
+
+    // Thin elongated raindrop streak geometry
+    const dropGeo = new THREE.BoxGeometry(0.025, 0.72, 0.025);
+    const dropMat = new THREE.MeshBasicMaterial({
+      color: "#c8e0ff",
+      transparent: true,
+      opacity: 0.45,
+      depthWrite: false
+    });
+
+    this.rainInst = new THREE.InstancedMesh(dropGeo, dropMat, this.rainCount);
+    this.rainInst.visible = false;
+    this.rainInst.frustumCulled = false;
+    this.scene.add(this.rainInst);
+
+    this.drops = [];
+    for (let i = 0; i < this.rainCount; i++) {
+      this.drops.push({
+        x: (Math.random() - 0.5) * this.rainVolume.width,
+        y: Math.random() * this.rainVolume.height,
+        z: (Math.random() - 0.5) * this.rainVolume.depth,
+        speed: 14 + Math.random() * 6
+      });
+    }
+
+    // Ground splash ring pool on upward-facing wet turf
+    this.splashCount = 90;
+    const ringGeo = new THREE.RingGeometry(0.05, 0.16, 12);
+    ringGeo.rotateX(-Math.PI / 2);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: "#d9ecff",
+      transparent: true,
+      opacity: 0.42,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    this.splashInst = new THREE.InstancedMesh(ringGeo, ringMat, this.splashCount);
+    this.splashInst.visible = false;
+    this.splashInst.frustumCulled = false;
+    this.scene.add(this.splashInst);
+
+    this.splashes = [];
+    for (let i = 0; i < this.splashCount; i++) {
+      this.splashes.push({
+        x: (Math.random() - 0.5) * 36,
+        z: (Math.random() - 0.5) * 14,
+        phase: Math.random()
+      });
+    }
+
+    this.wetness = 0.0;
+    this.targetWetness = 0.0;
+    this.dummy = new THREE.Object3D();
+  }
+
+  /**
+   * Configures weather envelope & couples surface roughness/color + lighting
+   */
+  applyWeatherEnvelope(weatherName, windForce, lightingRefs) {
+    const isRain = weatherName.includes("Rain");
+    const isWind = weatherName.includes("Wind");
+
+    this.targetWetness = isRain ? 1.0 : 0.0;
+    this.rainInst.visible = isRain;
+    this.splashInst.visible = isRain;
+
+    // Couple sky, fog, and sun intensity to weather state
+    if (lightingRefs) {
+      const { sunLight, hemiLight, fog, renderer } = lightingRefs;
+      if (isRain && isWind) {
+        sunLight.intensity = 1.35;
+        sunLight.color.set("#b9cbe6");
+        hemiLight.intensity = 0.85;
+        fog.color.set("#28374f");
+        fog.near = 45;
+        fog.far = 260;
+        renderer.setClearColor("#28374f");
+      } else if (isRain) {
+        sunLight.intensity = 1.65;
+        sunLight.color.set("#c7d8f0");
+        hemiLight.intensity = 0.95;
+        fog.color.set("#364966");
+        fog.near = 60;
+        fog.far = 310;
+        renderer.setClearColor("#364966");
+      } else if (isWind) {
+        sunLight.intensity = 2.55;
+        sunLight.color.set("#fff2d6");
+        hemiLight.intensity = 1.1;
+        fog.color.set("#5c85b8");
+        fog.near = 85;
+        fog.far = 420;
+        renderer.setClearColor("#5c85b8");
+      } else {
+        // Clear Golden-Hour Royal Turf Day
+        sunLight.intensity = 2.85;
+        sunLight.color.set("#fff4dc");
+        hemiLight.intensity = 1.18;
+        fog.color.set("#6b9cf2");
+        fog.near = 95;
+        fog.far = 460;
+        renderer.setClearColor("#6b9cf2");
+      }
+    }
+  }
+
+  update(dt, cameraTargetX, weatherName, windForce) {
+    // Smoothly transition surface wetness
+    this.wetness = lerp(this.wetness, this.targetWetness, clamp(dt * 3.0, 0, 1));
+
+    // Couple track surface roughness & metalness to wetness (threejs-precipitation-surfaces)
+    if (this.course && this.course.turfMaterial) {
+      // Wet turf becomes darker, more specular (lower roughness)
+      this.course.turfMaterial.roughness = lerp(0.86, 0.24, this.wetness);
+      this.course.turfMaterial.metalness = lerp(0.03, 0.18, this.wetness);
+      const dryCol = new THREE.Color("#ffffff");
+      const wetCol = new THREE.Color("#9ab0a2");
+      this.course.turfMaterial.color.lerpColors(dryCol, wetCol, this.wetness);
+    }
+
+    if (!weatherName.includes("Rain")) return;
+
+    const w = windForce || 0;
+    const tiltAngle = clamp(w * 0.08, -0.45, 0.45);
+    const halfW = this.rainVolume.width * 0.5;
+    const h = this.rainVolume.height;
+
+    // Update camera-wrapped instanced 3D rain streaks
+    for (let i = 0; i < this.rainCount; i++) {
+      const d = this.drops[i];
+      d.y -= d.speed * dt;
+      d.x += w * 1.4 * dt;
+
+      if (d.y < 0) {
+        d.y += h;
+        d.x = (Math.random() - 0.5) * this.rainVolume.width;
+      }
+      if (d.x > halfW) d.x -= this.rainVolume.width;
+      if (d.x < -halfW) d.x += this.rainVolume.width;
+
+      this.dummy.position.set(cameraTargetX + d.x, d.y, d.z);
+      this.dummy.rotation.set(0, 0, -tiltAngle);
+      this.dummy.scale.set(1, 1, 1);
+      this.dummy.updateMatrix();
+      this.rainInst.setMatrixAt(i, this.dummy.matrix);
+    }
+    this.rainInst.instanceMatrix.needsUpdate = true;
+
+    // Update upward-surface splash ripples on wet turf
+    for (let i = 0; i < this.splashCount; i++) {
+      const s = this.splashes[i];
+      s.phase += dt * 2.6;
+      if (s.phase >= 1.0) {
+        s.phase -= 1.0;
+        s.x = (Math.random() - 0.5) * 38;
+        s.z = (Math.random() - 0.5) * 14;
+      }
+      const scale = 0.3 + s.phase * 1.4;
+      this.dummy.position.set(cameraTargetX + s.x, 0.025, s.z);
+      this.dummy.rotation.set(0, 0, 0);
+      this.dummy.scale.set(scale, 1, scale);
+      this.dummy.updateMatrix();
+      this.splashInst.setMatrixAt(i, this.dummy.matrix);
+    }
+    this.splashInst.instanceMatrix.needsUpdate = true;
+  }
+}
+
+
+/* --- MODULE: vfx3d.js --- */
+/* ============================================================================
+ * Horse Rally 3D — Object-Pooled 3D VFX & Particle Systems
+ * Skill: create-game-vfx
+ * ============================================================================ */
+
+
+class VFXSystem3D {
+  constructor(scene) {
+    this.scene = scene;
+    this.maxParticles = 360;
+    this.reducedMotion = false;
+
+    const geo = new THREE.DodecahedronGeometry(0.11, 0);
+    const mat = new THREE.MeshStandardMaterial({
+      roughness: 0.45,
+      metalness: 0.15
+    });
+
+    this.instMesh = new THREE.InstancedMesh(geo, mat, this.maxParticles);
+    this.instMesh.castShadow = false;
+    this.instMesh.frustumCulled = false;
+    this.scene.add(this.instMesh);
+
+    this.pool = [];
+    this.dummy = new THREE.Object3D();
+    this.tmpColor = new THREE.Color();
+
+    for (let i = 0; i < this.maxParticles; i++) {
+      this.pool.push({
+        active: false,
+        x: 0,
+        y: -100,
+        z: 0,
+        vx: 0,
+        vy: 0,
+        vz: 0,
+        scale: 1,
+        gravity: 9.8,
+        life: 0,
+        maxLife: 1,
+        colorHex: "#ffffff"
+      });
+      this.dummy.position.set(0, -100, 0);
+      this.dummy.scale.set(0.001, 0.001, 0.001);
+      this.dummy.updateMatrix();
+      this.instMesh.setMatrixAt(i, this.dummy.matrix);
+      this.instMesh.setColorAt(i, this.tmpColor.set("#ffffff"));
+    }
+    this.instMesh.instanceMatrix.needsUpdate = true;
+    if (this.instMesh.instanceColor) this.instMesh.instanceColor.needsUpdate = true;
+
+    this.nextIndex = 0;
+  }
+
+  spawn({ x, y, z, vx, vy, vz, colorHex, scale = 1.0, life = 0.5, gravity = 9.8 }) {
+    if (this.reducedMotion) return;
+    const idx = this.nextIndex;
+    this.nextIndex = (this.nextIndex + 1) % this.maxParticles;
+
+    const p = this.pool[idx];
+    p.active = true;
+    p.x = x;
+    p.y = y;
+    p.z = z;
+    p.vx = vx;
+    p.vy = vy;
+    p.vz = vz;
+    p.scale = scale;
+    p.life = life;
+    p.maxLife = life;
+    p.gravity = gravity;
+    p.colorHex = colorHex;
+
+    this.instMesh.setColorAt(idx, this.tmpColor.set(colorHex));
+    if (this.instMesh.instanceColor) this.instMesh.instanceColor.needsUpdate = true;
+  }
+
+  /**
+   * Emits turf clods or wet rain spray behind a galloping horse's hooves
+   */
+  emitHoofClods(worldX, laneZ, isWet) {
+    if (this.reducedMotion) return;
+    const count = isWet ? 4 : 3;
+    for (let i = 0; i < count; i++) {
+      const col = isWet
+        ? (i % 2 === 0 ? "#c2e0ff" : "#3a5743")
+        : (i % 2 === 0 ? "#4e3620" : "#2b6e34");
+      this.spawn({
+        x: worldX - 0.55 + rand(-0.2, 0.2),
+        y: 0.12,
+        z: laneZ + rand(-0.24, 0.24),
+        vx: rand(-4.5, -1.8),
+        vy: rand(1.6, 3.6),
+        vz: rand(-0.9, 0.9),
+        colorHex: col,
+        scale: rand(0.65, 1.15),
+        life: rand(0.28, 0.48),
+        gravity: 11.5
+      });
+    }
+  }
+
+  /**
+   * Emits golden & team-silk aerodynamic sparks during an AI burst surge (>>>)
+   */
+  emitBurstTrail(worldX, jumpY, laneZ, silkColorHex) {
+    if (this.reducedMotion) return;
+    for (let i = 0; i < 2; i++) {
+      this.spawn({
+        x: worldX - 0.65,
+        y: 1.15 + jumpY + rand(-0.25, 0.35),
+        z: laneZ + rand(-0.28, 0.28),
+        vx: rand(-6.5, -3.2),
+        vy: rand(-0.4, 0.8),
+        vz: rand(-0.6, 0.6),
+        colorHex: i === 0 ? "#ffd76a" : silkColorHex,
+        scale: rand(0.75, 1.3),
+        life: rand(0.25, 0.42),
+        gravity: 0.5
+      });
+    }
+  }
+
+  /**
+   * Emits foliage & soil burst when clearing a steeplechase hedge
+   */
+  emitHedgeTakeoff(worldX, laneZ) {
+    if (this.reducedMotion) return;
+    for (let i = 0; i < 10; i++) {
+      this.spawn({
+        x: worldX,
+        y: 0.45 + rand(0, 0.5),
+        z: laneZ + rand(-0.4, 0.4),
+        vx: rand(-3.5, 1.2),
+        vy: rand(1.8, 4.2),
+        vz: rand(-1.6, 1.6),
+        colorHex: i % 2 === 0 ? "#208c3c" : "#5e3e29",
+        scale: rand(0.8, 1.35),
+        life: rand(0.4, 0.75),
+        gravity: 9.5
+      });
+    }
+  }
+
+  /**
+   * Emits dramatic crimson/amber warning burst when a horse stumbles
+   */
+  emitStumbleBurst(worldX, laneZ) {
+    for (let i = 0; i < 22; i++) {
+      this.spawn({
+        x: worldX + rand(-0.4, 0.4),
+        y: 0.8 + rand(0, 0.8),
+        z: laneZ + rand(-0.5, 0.5),
+        vx: rand(-4.0, 4.0),
+        vy: rand(2.2, 6.0),
+        vz: rand(-4.0, 4.0),
+        colorHex: i % 2 === 0 ? "#ff526d" : "#ffd76a",
+        scale: rand(1.0, 1.65),
+        life: rand(0.55, 1.15),
+        gravity: 9.0
+      });
+    }
+  }
+
+  /**
+   * Emits Winner's Enclosure multi-color confetti at the finish gantry
+   */
+  emitFinishConfetti(finishWorldX, laneZ) {
+    const count = this.reducedMotion ? 16 : 65;
+    for (let i = 0; i < count; i++) {
+      const col = COLORS[i % COLORS.length];
+      this.spawn({
+        x: finishWorldX + rand(-1.5, 1.5),
+        y: 2.2 + rand(0, 2.2),
+        z: laneZ + rand(-3.5, 3.5),
+        vx: rand(-3.5, 4.5),
+        vy: rand(2.5, 7.0),
+        vz: rand(-4.5, 4.5),
+        colorHex: col,
+        scale: rand(0.9, 1.5),
+        life: rand(1.4, 2.6),
+        gravity: 3.8
+      });
+    }
+  }
+
+  clearAll() {
+    for (let i = 0; i < this.maxParticles; i++) {
+      this.pool[i].active = false;
+      this.dummy.position.set(0, -100, 0);
+      this.dummy.scale.set(0.001, 0.001, 0.001);
+      this.dummy.updateMatrix();
+      this.instMesh.setMatrixAt(i, this.dummy.matrix);
+    }
+    this.instMesh.instanceMatrix.needsUpdate = true;
+  }
+
+  update(dt) {
+    let dirty = false;
+    for (let i = 0; i < this.maxParticles; i++) {
+      const p = this.pool[i];
+      if (!p.active) continue;
+      dirty = true;
+
+      p.life -= dt;
+      if (p.life <= 0) {
+        p.active = false;
+        this.dummy.position.set(0, -100, 0);
+        this.dummy.scale.set(0.001, 0.001, 0.001);
+        this.dummy.updateMatrix();
+        this.instMesh.setMatrixAt(i, this.dummy.matrix);
+        continue;
+      }
+
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.z += p.vz * dt;
+      p.vy -= p.gravity * dt;
+
+      if (p.y < 0.04) {
+        p.y = 0.04;
+        p.vy *= -0.3;
+        p.vx *= 0.7;
+      }
+
+      const lifeRatio = Math.max(0.05, p.life / p.maxLife);
+      const s = p.scale * lifeRatio;
+      this.dummy.position.set(p.x, p.y, p.z);
+      this.dummy.rotation.set(p.life * 4, p.life * 6, 0);
+      this.dummy.scale.set(s, s, s);
+      this.dummy.updateMatrix();
+      this.instMesh.setMatrixAt(i, this.dummy.matrix);
+    }
+
+    if (dirty) {
+      this.instMesh.instanceMatrix.needsUpdate = true;
+    }
+  }
+}
+
+
+/* --- MODULE: camera3d.js --- */
+/* ============================================================================
+ * Horse Rally 3D — Multi-Mode Broadcast Camera Rig & Trauma Shake
+ * Skills: threejs-camera-direction, build-game-camera-controls
+ * ============================================================================ */
+
+
+class CameraDirector3D {
+  constructor(camera, domElement) {
+    this.camera = camera;
+    this.domElement = domElement;
+
+    this.modeIndex = 0; // 0 = broadcast, 1 = action, 2 = chase, 3 = aerial, 4 = orbit
+    this.currentPos = new THREE.Vector3(10, 6.5, 18);
+    this.currentLookAt = new THREE.Vector3(14, 1.3, 0);
+    this.desiredPos = new THREE.Vector3();
+    this.desiredLookAt = new THREE.Vector3();
+
+    this.trauma = 0;
+    this.reducedMotion = false;
+
+    // Free Orbit user controls state
+    this.orbitYaw = 0.35;
+    this.orbitPitch = 0.32;
+    this.orbitDistance = 16.5;
+    this.isPointerDown = false;
+    this.lastPointer = { x: 0, y: 0 };
+
+    this._bindPointerControls();
+  }
+
+  get mode() {
+    return CAMERA_MODES[this.modeIndex].id;
+  }
+
+  get modeInfo() {
+    return CAMERA_MODES[this.modeIndex];
+  }
+
+  setModeById(id) {
+    const idx = CAMERA_MODES.findIndex(m => m.id === id);
+    if (idx !== -1) this.modeIndex = idx;
+    return this.modeInfo;
+  }
+
+  cycleMode() {
+    this.modeIndex = (this.modeIndex + 1) % CAMERA_MODES.length;
+    return this.modeInfo;
+  }
+
+  addTrauma(amount) {
+    if (this.reducedMotion) return;
+    this.trauma = Math.min(1.0, this.trauma + amount);
+  }
+
+  _bindPointerControls() {
+    if (!this.domElement) return;
+    this.domElement.addEventListener("pointerdown", e => {
+      if (e.button !== 0) return;
+      this.isPointerDown = true;
+      this.lastPointer.x = e.clientX;
+      this.lastPointer.y = e.clientY;
+    });
+
+    window.addEventListener("pointermove", e => {
+      if (!this.isPointerDown) return;
+      const dx = e.clientX - this.lastPointer.x;
+      const dy = e.clientY - this.lastPointer.y;
+      this.lastPointer.x = e.clientX;
+      this.lastPointer.y = e.clientY;
+
+      this.orbitYaw -= dx * 0.0065;
+      this.orbitPitch = clamp(this.orbitPitch + dy * 0.0055, 0.08, 1.25);
+    });
+
+    window.addEventListener("pointerup", () => {
+      this.isPointerDown = false;
+    });
+
+    this.domElement.addEventListener("wheel", e => {
+      this.orbitDistance = clamp(this.orbitDistance + e.deltaY * 0.014, 6.5, 42);
+    }, { passive: true });
+  }
+
+  /**
+   * Computes camera position & look-at target independently with frame-rate-independent smoothing
+   */
+  update(dt, context) {
+    const {
+      gameState,
+      horses,
+      leaderIdx,
+      playerPick,
+      finishSimX,
+      raceFurlongs,
+      nowSec
+    } = context;
+
+    const startM = START_X * SIM_TO_M;
+    const finishM = finishSimX * SIM_TO_M;
+
+    // Determine authoritative subject X & Z
+    const leadHorse = horses[leaderIdx >= 0 ? leaderIdx : 0] || { x: START_X };
+    const leadX = leadHorse.x * SIM_TO_M;
+
+    const focusIdx = (playerPick != null && horses[playerPick]) ? playerPick : (leaderIdx >= 0 ? leaderIdx : 2);
+    const focusHorse = horses[focusIdx] || leadHorse;
+    const focusX = focusHorse.x * SIM_TO_M;
+    const focusZ = LANES_Z[focusIdx] || 0;
+
+    // Paddock / Pre-race idle camera when on Start or Betting Board
+    if (gameState === STATE.BOARD || gameState === STATE.PICK || gameState === STATE.WAIT || gameState === STATE.COUNTDOWN) {
+      if (this.mode === "orbit" || this.isPointerDown) {
+        this._computeOrbitShot(startM + 1.2, 0);
+      } else {
+        // Gentle sweeping paddock showcase around the starting stalls
+        const angle = Math.sin(nowSec * 0.35) * 0.45 + 0.55;
+        const dist = 13.5;
+        this.desiredPos.set(
+          startM + Math.cos(angle) * dist,
+          3.8 + Math.sin(nowSec * 0.5) * 0.4,
+          Math.sin(angle) * dist + 4.5
+        );
+        this.desiredLookAt.set(startM + 1.0, 1.35, focusZ * 0.4);
+      }
+    } else {
+      // Racing or Finished camera modes
+      const progress = clamp((leadX - startM) / Math.max(1, finishM - startM), 0, 1);
+
+      // Automatic dramatic finish-line angle in the final 3% unless user is in Chase or Orbit
+      if (progress > 0.965 && (this.mode === "broadcast" || this.mode === "action")) {
+        this.desiredPos.set(finishM + 7.5, 2.6, 10.8);
+        this.desiredLookAt.set(leadX, 1.35, 0);
+      } else if (this.mode === "broadcast") {
+        // Elevated rail-side tracking dolly (preserves 2D distance-aware look-ahead feel)
+        const distFactor = clamp((raceFurlongs - 5) / (18 - 5), 0, 1);
+        const leadAhead = lerp(3.2, 5.8, distFactor);
+        this.desiredPos.set(leadX + leadAhead - 3.5, 5.2, 16.2);
+        this.desiredLookAt.set(leadX + leadAhead * 0.45, 1.25, -0.5);
+      } else if (this.mode === "action") {
+        // Low-angle dramatic rail-side sweeping shot
+        this.desiredPos.set(leadX + 3.8, 2.05, 10.6);
+        this.desiredLookAt.set(leadX - 0.5, 1.35, focusZ * 0.35);
+      } else if (this.mode === "chase") {
+        // Jockey 3rd-person chase rig behind player's horse (or leader)
+        this.desiredPos.set(focusX - 5.4, 2.85, focusZ + 0.65);
+        this.desiredLookAt.set(focusX + 8.5, 1.35, focusZ);
+      } else if (this.mode === "aerial") {
+        // Helicopter overhead view showing pack formation and hedge lines
+        this.desiredPos.set(leadX - 4.0, 21.0, 11.5);
+        this.desiredLookAt.set(leadX + 3.5, 0.5, 0);
+      } else {
+        // Free Orbit around current leader
+        this._computeOrbitShot(leadX, focusZ);
       }
     }
 
-    function rollRaceTypeAndDistance(randomizeType = true) {
-      if (randomizeType) useHedges = Math.random() < 0.5;
+    // Frame-rate-independent damped convergence
+    const posAlpha = 1 - Math.exp(-dt * 6.5);
+    const lookAlpha = 1 - Math.exp(-dt * 9.0);
+    this.currentPos.lerp(this.desiredPos, posAlpha);
+    this.currentLookAt.lerp(this.desiredLookAt, lookAlpha);
 
-      raceFurlongs = pick(FURLONG_CHOICES);
-      RACE_DISTANCE = raceFurlongs * PX_PER_FURLONG;
-      FINISH_X = START_X + RACE_DISTANCE;
+    // Apply trauma shake as a temporary modifier layered over the base camera
+    let shakeX = 0, shakeY = 0, shakeZ = 0;
+    if (this.trauma > 0 && !this.reducedMotion) {
+      const shakeAmt = this.trauma * this.trauma * 0.45;
+      shakeX = (Math.random() * 2 - 1) * shakeAmt;
+      shakeY = (Math.random() * 2 - 1) * shakeAmt;
+      shakeZ = (Math.random() * 2 - 1) * shakeAmt;
+      this.trauma = Math.max(0, this.trauma - dt * 2.2);
+    }
 
-      buildHedges();
+    this.camera.position.set(
+      this.currentPos.x + shakeX,
+      Math.max(0.6, this.currentPos.y + shakeY),
+      this.currentPos.z + shakeZ
+    );
+    this.camera.lookAt(this.currentLookAt);
+  }
 
-      raceTypeChip.textContent = `Race: ${useHedges ? 'Hedges' : 'Flat'}`;
-      distanceChip.textContent = `Distance: ${raceFurlongs}f`;
+  _computeOrbitShot(centerX, centerZ) {
+    const horiz = Math.cos(this.orbitPitch) * this.orbitDistance;
+    const vert = Math.sin(this.orbitPitch) * this.orbitDistance;
+    this.desiredPos.set(
+      centerX - Math.sin(this.orbitYaw) * horiz,
+      Math.max(1.0, 1.2 + vert),
+      centerZ + Math.cos(this.orbitYaw) * horiz
+    );
+    this.desiredLookAt.set(centerX, 1.3, centerZ);
+  }
 
-      const typeTxt = `${raceIcons[useHedges ? 'Hedges' : 'Flat']} ${useHedges ? 'Hedges' : 'Flat'}`;
-      const distTxt = `📏 ${raceFurlongs}f`;
-      const w = weather || "Clear";
-      const wTxt = `${weatherIcons[w] ?? ''} ${w}`;
-      raceCard.innerHTML = `
+  snapToTarget() {
+    this.currentPos.copy(this.desiredPos);
+    this.currentLookAt.copy(this.desiredLookAt);
+    this.camera.position.copy(this.currentPos);
+    this.camera.lookAt(this.currentLookAt);
+  }
+}
+
+
+/* --- MODULE: scene3d.js --- */
+/* ============================================================================
+ * Horse Rally 3D — Three.js Scene Manager, Lighting & Visual Validation
+ * Skills: threejs-skill-router, threejs-visual-validation
+ * ============================================================================ */
+
+
+
+
+
+
+
+class SceneManager3D {
+  constructor(canvas, minimapCanvas) {
+    this.canvas = canvas;
+    this.minimapCanvas = minimapCanvas;
+    this.minimapCtx = minimapCanvas ? minimapCanvas.getContext("2d") : null;
+
+    this.qualityTier = "high"; // "high" | "balanced" | "reduced"
+    this.debugMode = "off";    // "off" | "wireframe" | "weather"
+
+    // 1. WebGLRenderer setup with ACESFilmicToneMapping (no-post baseline that reads cleanly)
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: this.canvas,
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.08;
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.setClearColor("#6b9cf2");
+
+    // 2. Scene & Atmospheric Fog
+    this.scene = new THREE.Scene();
+    this.fog = new THREE.Fog("#6b9cf2", 95, 460);
+    this.scene.fog = this.fog;
+
+    // 3. Perspective Camera
+    this.camera = new THREE.PerspectiveCamera(44, 16 / 9, 0.4, 700);
+
+    // 4. Lighting System (Directional Sun following the pack + Hemisphere Sky/Turf fill)
+    this.hemiLight = new THREE.HemisphereLight("#e6f2ff", "#1c5428", 1.18);
+    this.hemiLight.position.set(0, 50, 0);
+    this.scene.add(this.hemiLight);
+
+    this.sunLight = new THREE.DirectionalLight("#fff4dc", 2.85);
+    this.sunLight.position.set(30, 38, 26);
+    this.sunLight.castShadow = true;
+    this.sunLight.shadow.mapSize.width = 2048;
+    this.sunLight.shadow.mapSize.height = 2048;
+    this.sunLight.shadow.camera.near = 5;
+    this.sunLight.shadow.camera.far = 140;
+    const d = 22;
+    this.sunLight.shadow.camera.left = -d;
+    this.sunLight.shadow.camera.right = d;
+    this.sunLight.shadow.camera.top = d;
+    this.sunLight.shadow.camera.bottom = -d;
+    this.sunLight.shadow.bias = -0.0005;
+    this.scene.add(this.sunLight);
+    this.scene.add(this.sunLight.target);
+
+    // 5. Subsystems
+    this.course = new RacecourseBuilder(this.scene);
+    this.weatherSystem = new WeatherSystem3D(this.scene, this.course);
+    this.vfx = new VFXSystem3D(this.scene);
+    this.cameraDirector = new CameraDirector3D(this.camera, this.canvas);
+
+    // 6. 5 Articulated 3D Horse & Jockey Actors
+    this.horseActors = [];
+    for (let i = 0; i < NUM_HORSES; i++) {
+      const actor = createHorseActor(i, COLORS[i % COLORS.length]);
+      this.scene.add(actor.root);
+      this.horseActors.push(actor);
+    }
+
+    // Telemetry state
+    this.fps = 60;
+    this._frameCount = 0;
+    this._fpsAccum = 0;
+
+    this.resize();
+    window.addEventListener("resize", () => this.resize());
+  }
+
+  resize() {
+    const stageEl = this.canvas.parentElement;
+    if (!stageEl) return;
+    const w = Math.max(320, stageEl.clientWidth);
+    const h = Math.max(420, stageEl.clientHeight);
+    const maxDpr = this.qualityTier === "high" ? 2 : 1.25;
+    const dpr = Math.min(maxDpr, window.devicePixelRatio || 1);
+
+    this.renderer.setPixelRatio(dpr);
+    this.renderer.setSize(w, h, false);
+    this.camera.aspect = w / h;
+    this.camera.updateProjectionMatrix();
+
+    if (this.minimapCanvas && this.minimapCtx) {
+      const mw = this.minimapCanvas.clientWidth || 420;
+      const mh = this.minimapCanvas.clientHeight || 48;
+      this.minimapCanvas.width = Math.floor(mw * dpr);
+      this.minimapCanvas.height = Math.floor(mh * dpr);
+      this.minimapCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      this.minimapW = mw;
+      this.minimapH = mh;
+    }
+  }
+
+  setQualityTier(tier) {
+    this.qualityTier = tier;
+    const isReduced = tier === "reduced";
+    this.vfx.reducedMotion = isReduced;
+    this.cameraDirector.reducedMotion = isReduced;
+    this.renderer.shadowMap.enabled = tier !== "reduced";
+    this.resize();
+  }
+
+  setDebugMode(mode) {
+    this.debugMode = mode;
+    const wire = mode === "wireframe";
+    this.scene.traverse(obj => {
+      if (obj.isMesh && obj.material) {
+        if (Array.isArray(obj.material)) {
+          obj.material.forEach(m => { m.wireframe = wire; });
+        } else {
+          obj.material.wireframe = wire;
+        }
+      }
+    });
+  }
+
+  updateSunFollow(focusWorldX) {
+    // Keep shadow frustum centered on the racing pack so shadows stay crisp across 18 furlongs
+    this.sunLight.position.set(focusWorldX + 24, 36, 24);
+    this.sunLight.target.position.set(focusWorldX, 0, 0);
+    this.sunLight.target.updateMatrixWorld();
+  }
+
+  renderFrame(dt) {
+    this._frameCount++;
+    this._fpsAccum += dt;
+    if (this._fpsAccum >= 0.5) {
+      this.fps = Math.round(this._frameCount / this._fpsAccum);
+      this._frameCount = 0;
+      this._fpsAccum = 0;
+    }
+
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  getTelemetry() {
+    const info = this.renderer.info;
+    return {
+      fps: this.fps,
+      drawCalls: info.render.calls,
+      triangles: info.render.triangles,
+      wetness: this.weatherSystem.wetness.toFixed(2)
+    };
+  }
+}
+
+
+/* --- MODULE: main.js --- */
+/* ============================================================================
+ * Horse Rally 3D — Main Race Simulation, UI Binding & Game Loop
+ * Preserves 100% of original horse.html gameplay, rules, odds, players & controls
+ * ============================================================================ */
+
+
+
+
+/* ======================== Game State ========================= */
+let gameState = STATE.BOARD;
+let useHedges = false;
+let weather = "Clear";
+let speedFactor = 1;
+let windForce = 0;
+let fallProb = BASE_FALL_PROB;
+
+let raceFurlongs = 12;
+let RACE_DISTANCE = raceFurlongs * PX_PER_FURLONG;
+let FINISH_X = START_X + RACE_DISTANCE;
+let HEDGES_X = [];
+
+let startTime = 0;
+let lastTs = 0;
+let commentaryTs = 0;
+const commentaryInterval = 950;
+let commentary = "";
+
+let horses = [];
+let baseCard = [];
+let playerPick = null;
+let players = [];
+let finishTimes = [];
+let fallen = [];
+let jumpStart = [];
+const model = [];
+let currentLeader = -1;
+let leaderSince = 0;
+let gateOpenProgress = 0;
+let photoFinishTriggered = false;
+let slowMoTimer = 0;
+
+/* Subsystems */
+let scene3d = null;
+const audio = new RaceAudioEngine();
+
+/* DOM Elements */
+const tbody = document.getElementById("tbodyHorses");
+const legendEl = document.getElementById("legend");
+const metaEl = document.getElementById("raceMeta");
+const trevorEl = document.getElementById("trevorPreview");
+const comEl = document.getElementById("commentary");
+const weatherChip = document.getElementById("weatherChip");
+const weatherTop = document.getElementById("weatherTop");
+const banner = document.getElementById("finishBanner");
+const bannerTitle = document.getElementById("finishTitle");
+const bannerGrid = document.getElementById("finishGrid");
+const playersResultEl = document.getElementById("playersResult");
+const startModal = document.getElementById("startModal");
+const btnStart = document.getElementById("btnStart");
+const playersUI = document.getElementById("playersUI");
+const playerNameInp = document.getElementById("playerName");
+const playerHorseSel = document.getElementById("playerHorse");
+const formList = document.getElementById("formList");
+const countdownEl = document.getElementById("countdown");
+const countNumEl = document.getElementById("countNum");
+const flashEl = document.getElementById("flash");
+const raceTypeChip = document.getElementById("raceTypeChip");
+const distanceChip = document.getElementById("distanceChip");
+const raceCard = document.getElementById("raceCard");
+const panelBoard = document.getElementById("panelBoard");
+const btnToggleBoard = document.getElementById("btnToggleBoard");
+const btnCameraMode = document.getElementById("btnCameraMode");
+const btnAudioMute = document.getElementById("btnAudioMute");
+const btnVoiceToggle = document.getElementById("btnVoiceToggle");
+const btnDebugDrawer = document.getElementById("btnDebugDrawer");
+const debugDrawer = document.getElementById("debugDrawer");
+const telemetryEl = document.getElementById("telemetryStats");
+const seedInput = document.getElementById("seedInput");
+
+/* ============================ Course & Card Setup ============================= */
+function buildHedges() {
+  HEDGES_X = [];
+  if (!useHedges) return;
+  const n = Math.max(3, Math.round(raceFurlongs / 2)); // 5f→3, 12f→6, 18f→9
+  for (let i = 0; i < n; i++) {
+    const t = 0.20 + (0.72 * (i + 1) / (n + 1));
+    const x = Math.round(START_X + t * RACE_DISTANCE);
+    if (x < FINISH_X - 32) HEDGES_X.push(x);
+  }
+}
+
+function sync3DCourseAndWeather() {
+  if (!scene3d) return;
+  scene3d.course.buildCourse({
+    raceFurlongs,
+    finishSimX: FINISH_X,
+    hedgesSimX: HEDGES_X,
+    useHedges
+  });
+  scene3d.weatherSystem.applyWeatherEnvelope(weather, windForce, {
+    sunLight: scene3d.sunLight,
+    hemiLight: scene3d.hemiLight,
+    fog: scene3d.fog,
+    renderer: scene3d.renderer
+  });
+}
+
+function rollRaceTypeAndDistance(randomizeType = true) {
+  if (randomizeType) useHedges = random() < 0.5;
+
+  raceFurlongs = pick(FURLONG_CHOICES);
+  RACE_DISTANCE = raceFurlongs * PX_PER_FURLONG;
+  FINISH_X = START_X + RACE_DISTANCE;
+
+  buildHedges();
+
+  raceTypeChip.textContent = `Race: ${useHedges ? "Hedges" : "Flat"}`;
+  distanceChip.textContent = `Distance: ${raceFurlongs}f`;
+
+  const typeTxt = `${RACE_ICONS[useHedges ? "Hedges" : "Flat"]} ${useHedges ? "Hedges (Steeplechase)" : "Flat Turf"}`;
+  const distTxt = `📏 ${raceFurlongs} Furlongs`;
+  const w = weather || "Clear";
+  const wTxt = `${WEATHER_ICONS[w] ?? ""} ${w}`;
+  raceCard.innerHTML = `
     <span class="pill" style="background:#0a1131;border-color:#2d3a7a">${typeTxt}</span>
     <span class="pill" style="background:#0a1131;border-color:#2d3a7a">${distTxt}</span>
     <span class="pill" style="background:#0a1131;border-color:#2d3a7a">Weather: ${wTxt}</span>
   `;
-    }
 
-    function freshRaceMeta() {
-      const track = pick(["FAST", "GOOD", "SLOW", "SOFT"]);
-      const tod = `${randi(1, 12)}:${String(randi(0, 59)).padStart(2, '0')}`;
-      const raceNo = randi(1, 9);
-      metaEl.textContent = `Track: ${track} • Time: ${tod} • Race #${raceNo} • Type: ${useHedges ? 'Hedges' : 'Flat'} • Distance: ${raceFurlongs}f`;
-    }
+  sync3DCourseAndWeather();
+  updateModeButtons();
+}
 
-    function makeCard() {
-      const names = [...HORSE_NAMES].sort(() => Math.random() - 0.5).slice(0, NUM_HORSES);
-      baseCard = names.map((name, i) => ({
-        name, color: COLORS[i % COLORS.length], odds: randomOdds(),
-        trainer: pick(TRAINERS), jockey: pick(JOCKEYS), owner: pick(OWNERS),
-        last: pick(LAST_TMPL)({ pos: pick(POS), days: randi(5, 30) }),
-        laneY: LANES_Y[i], idx: i
-      }));
-    }
+function updateModeButtons() {
+  const btnFlat = document.getElementById("btnFlat");
+  const btnHedges = document.getElementById("btnHedges");
+  if (btnFlat && btnHedges) {
+    btnFlat.classList.toggle("active-mode", !useHedges);
+    btnHedges.classList.toggle("active-mode", useHedges);
+  }
+}
 
-    function seedHorses(fromCard = null) {
-      const card = fromCard || baseCard;
-      horses = card.map((c) => ({
-        ...c, x: START_X, speed: rand(110, 130),
-        img: ASSETS.horses[c.idx]
-      }));
-      model.length = 0;
-      horses.forEach(() => model.push({
-        pace: rand(104, 124), // slightly lower base pace
-        stamina: rand(0.82, 1.05),
-        aggression: rand(0.6, 1.3),
-        surgeT: rand(6.5, 12.5),
-        fatigue: 0,
-        momentum: 0,
-        boostT: 0
-      }));
+function freshRaceMeta() {
+  const track = pick(["FAST", "GOOD", "SLOW", "SOFT"]);
+  const tod = `${randi(1, 12)}:${String(randi(0, 59)).padStart(2, "0")}`;
+  const raceNo = randi(1, 9);
+  metaEl.textContent = `Track: ${track} • Time: ${tod} • Race #${raceNo} • Type: ${useHedges ? "Hedges" : "Flat"} • Distance: ${raceFurlongs}f`;
+}
 
-      finishTimes = Array(NUM_HORSES).fill(undefined);
-      fallen = Array(NUM_HORSES).fill(false);
-      jumpStart = Array(NUM_HORSES).fill(0);
-      playerPick = null;
-      camX = 0;
-      commentary = "Pick a horse to arm the start (or add players in the start screen).";
-      commentaryTs = performance.now();
-      leaderSince = 0; currentLeader = -1;
+function makeCard() {
+  const names = [...HORSE_NAMES].sort(() => random() - 0.5).slice(0, NUM_HORSES);
+  baseCard = names.map((name, i) => ({
+    name,
+    color: COLORS[i % COLORS.length],
+    odds: randomOdds(),
+    trainer: pick(TRAINERS),
+    jockey: pick(JOCKEYS),
+    owner: pick(OWNERS),
+    last: pick(LAST_TMPL)({ pos: pick(POS), days: randi(5, 30) }),
+    laneY: LANES_Y_2D[i],
+    idx: i
+  }));
+}
 
-      // table
-      tbody.innerHTML = '';
-      horses.forEach((h, idx) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-      <td>${idx + 1}</td>
+function seedHorses(fromCard = null) {
+  const card = fromCard || baseCard;
+  horses = card.map((c) => ({
+    ...c,
+    x: START_X,
+    speed: rand(110, 130)
+  }));
+  model.length = 0;
+  horses.forEach(() => model.push({
+    pace: rand(104, 124),
+    stamina: rand(0.82, 1.05),
+    aggression: rand(0.6, 1.3),
+    surgeT: rand(6.5, 12.5),
+    fatigue: 0,
+    momentum: 0,
+    boostT: 0
+  }));
+
+  finishTimes = Array(NUM_HORSES).fill(undefined);
+  fallen = Array(NUM_HORSES).fill(false);
+  jumpStart = Array(NUM_HORSES).fill(0);
+  playerPick = null;
+  gateOpenProgress = 0;
+  photoFinishTriggered = false;
+  slowMoTimer = 0;
+
+  if (scene3d) {
+    scene3d.course.setStartingGatesOpen(0);
+    scene3d.vfx.clearAll();
+  }
+
+  commentary = "Pick a horse to arm the start (or add players in the start screen).";
+  comEl.textContent = commentary;
+  commentaryTs = performance.now();
+  leaderSince = 0;
+  currentLeader = -1;
+
+  // Populate Betting Board Table
+  tbody.innerHTML = "";
+  horses.forEach((h, idx) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><span class="saddle-num" style="background:${h.color}">${idx + 1}</span></td>
       <td class="name">
-        <div style="display:flex;align-items:center;gap:8px">
-          <span class="dot" style="background:${h.color}"></span>${h.name}
-        </div>
-        <div class="small" style="opacity:.85">${h.last}</div>
+        <div style="font-weight:700;color:#f4f7ff">${h.name}</div>
+        <div class="small" style="opacity:.82">${h.last}</div>
       </td>
-      <td><span class="pill">${h.odds}</span></td>
+      <td><span class="pill odds-pill">${h.odds}</span></td>
       <td>${h.trainer}</td>
       <td>${h.jockey}</td>`;
-        tr.style.cursor = 'pointer';
-        tr.addEventListener('click', () => chooseHorse(idx));
-        tbody.appendChild(tr);
-      });
+    tr.style.cursor = "pointer";
+    tr.addEventListener("click", () => chooseHorse(idx));
+    tbody.appendChild(tr);
+  });
 
-      // legend
-      legendEl.innerHTML = '';
-      horses.forEach((h, i) => {
-        const tag = document.createElement('div');
-        tag.style.display = 'flex'; tag.style.alignItems = 'center'; tag.style.gap = '6px';
-        tag.innerHTML = `<span class="dot" style="background:${h.color}"></span><span class="small">${i + 1}</span>`;
-        legendEl.appendChild(tag);
-      });
+  // Legend
+  legendEl.innerHTML = "";
+  horses.forEach((h, i) => {
+    const tag = document.createElement("div");
+    tag.className = "legend-item";
+    tag.style.cursor = "pointer";
+    tag.title = `Focus / Pick #${i + 1} ${h.name}`;
+    tag.innerHTML = `<span class="dot" style="background:${h.color}"></span><span class="small"><b>#${i + 1}</b></span>`;
+    tag.onclick = () => chooseHorse(i);
+    legendEl.appendChild(tag);
+  });
 
-      buildTrevorPreview();
-      rebuildHorseSelect();
-      buildFormSidePanel();
-    }
+  buildTrevorPreview();
+  rebuildHorseSelect();
+  buildFormSidePanel();
+}
 
-    function buildTrevorPreview() {
-      let out = `<b>Trevor's Famous Bookies — Preview</b><br/>`;
-      out += `Top fancy: <b>${horses[0].name}</b> (${horses[0].odds}), trained by ${horses[0].trainer} for ${horses[0].owner}. `;
-      out += `Value each-way: <b>${horses[1].name}</b> (${horses[1].odds}) — ${horses[1].last}. `;
-      out += `Keep an eye on <b>${horses[2].name}</b> late if they go too quick up front.`;
-      trevorEl.innerHTML = out;
-    }
+function buildTrevorPreview() {
+  let out = `<b>Trevor's Famous Bookies — Preview</b><br/>`;
+  out += `Top fancy: <b>${horses[0].name}</b> (${horses[0].odds}), trained by ${horses[0].trainer} for ${horses[0].owner}. `;
+  out += `Value each-way: <b>${horses[1].name}</b> (${horses[1].odds}) — ${horses[1].last}. `;
+  out += `Keep an eye on <b>${horses[2].name}</b> late if they go too quick up front.`;
+  trevorEl.innerHTML = out;
+}
 
-    function buildFormSidePanel() {
-      formList.innerHTML = '';
-      horses.forEach((h) => {
-        const row = document.createElement('div');
-        row.innerHTML = `
-      <div style="display:flex;gap:8px;align-items:flex-start">
-        <div class="dot" style="background:${h.color};flex:0 0 10px"></div>
+function buildFormSidePanel() {
+  formList.innerHTML = "";
+  horses.forEach((h, idx) => {
+    const row = document.createElement("div");
+    row.className = "form-row";
+    row.innerHTML = `
+      <div style="display:flex;gap:10px;align-items:flex-start">
+        <span class="saddle-num" style="background:${h.color};flex:0 0 22px">${idx + 1}</span>
         <div>
           <div><b>${h.name}</b> <span class="pill" style="margin-left:6px">${h.odds}</span></div>
           <div class="small">Jockey: ${h.jockey} • Trainer: ${h.trainer}</div>
-          <div class="small" style="opacity:.85">${h.last}</div>
+          <div class="small" style="opacity:.82">${h.last}</div>
         </div>
       </div>`;
-        formList.appendChild(row);
-      });
+    formList.appendChild(row);
+  });
+}
+
+function rebuildHorseSelect() {
+  const taken = new Set(players.map(p => p.horse));
+  playerHorseSel.innerHTML = "";
+  horses.forEach((h, i) => {
+    const opt = document.createElement("option");
+    opt.value = i;
+    opt.textContent = `${i + 1} — ${h.name}`;
+    if (taken.has(i)) opt.disabled = true;
+    playerHorseSel.appendChild(opt);
+  });
+}
+
+function renderPlayersUI() {
+  playersUI.innerHTML = "";
+  players.forEach((p, idx) => {
+    const badge = document.createElement("div");
+    badge.className = "pill";
+    badge.style.cursor = "pointer";
+    badge.title = "Click to remove";
+    badge.innerHTML = `<span class="dot" style="background:${horses[p.horse].color}"></span> <b>${p.name}</b> — ${horses[p.horse].name} ✕`;
+    badge.onclick = () => {
+      players.splice(idx, 1);
+      renderPlayersUI();
+      rebuildHorseSelect();
+    };
+    playersUI.appendChild(badge);
+  });
+}
+
+/* ===================== Race Flow ==================== */
+function chooseHorse(i) {
+  audio.unlock();
+  if (![STATE.PICK, STATE.BOARD, STATE.WAIT].includes(gameState)) {
+    // Allow switching camera focus horse mid-race in Chase cam
+    playerPick = i;
+    return;
+  }
+  playerPick = i;
+  commentary = `You backed #${i + 1} ${horses[i].name} (${horses[i].odds})! Press Space or Start Race.`;
+  comEl.textContent = commentary;
+  [...tbody.children].forEach((tr, idx) => {
+    tr.classList.toggle("selected-row", idx === i);
+  });
+  gameState = STATE.WAIT;
+  btnStart.style.display = "inline-block";
+}
+
+function setWeatherRandom() {
+  const w = pick(["Clear", "Rain", "Wind", "Rain & Wind"]);
+  weather = w;
+
+  if (w === "Clear") { fallProb = BASE_FALL_PROB; speedFactor = 1; windForce = 0; }
+  if (w === "Rain") { fallProb = BASE_FALL_PROB * 1.5; speedFactor = 0.9; windForce = 0; }
+  if (w === "Wind") { fallProb = BASE_FALL_PROB; speedFactor = 1; windForce = rand(-5, 5); }
+  if (w === "Rain & Wind") { fallProb = BASE_FALL_PROB * 1.5; speedFactor = 0.85; windForce = rand(-5, 5); }
+
+  const icon = WEATHER_ICONS[w] ?? "";
+  weatherChip.textContent = `Weather: ${icon} ${w}`;
+  weatherTop.textContent = `Weather: ${icon} ${w}`;
+
+  rollRaceTypeAndDistance(false);
+}
+
+function showCountdown(startCb) {
+  let n = 3;
+  countNumEl.textContent = n;
+  countdownEl.style.display = "flex";
+  audio.playCountdownTick(n);
+  const iv = setInterval(() => {
+    n--;
+    if (n <= 0) {
+      clearInterval(iv);
+      countdownEl.style.display = "none";
+      audio.playStartBell();
+      startCb();
+      return;
     }
+    countNumEl.textContent = n;
+    audio.playCountdownTick(n);
+  }, 700);
+}
 
-    function rebuildHorseSelect() {
-      const taken = new Set(players.map(p => p.horse));
-      playerHorseSel.innerHTML = '';
-      horses.forEach((h, i) => {
-        const opt = document.createElement('option');
-        opt.value = i; opt.textContent = `${i + 1} — ${h.name}`;
-        if (taken.has(i)) opt.disabled = true;
-        playerHorseSel.appendChild(opt);
-      });
+function startRace() {
+  if (gameState !== STATE.WAIT) return;
+  audio.unlock();
+  setWeatherRandom();
+
+  horses.forEach((h, i) => {
+    h.x = START_X;
+    fallen[i] = false;
+    finishTimes[i] = undefined;
+    jumpStart[i] = 0;
+  });
+  model.forEach(m => {
+    m.fatigue = 0;
+    m.momentum = 0;
+    m.surgeT = rand(6.5, 12.5);
+    m.boostT = 0;
+  });
+
+  gateOpenProgress = 0;
+  photoFinishTriggered = false;
+  slowMoTimer = 0;
+  if (scene3d) {
+    scene3d.course.setStartingGatesOpen(0);
+    scene3d.vfx.clearAll();
+  }
+
+  startTime = performance.now();
+  lastTs = startTime;
+  commentaryTs = startTime;
+  commentary = "Gates crash open — They're off!";
+  comEl.textContent = commentary;
+  banner.style.display = "none";
+  btnStart.style.display = "none";
+  flashEl.style.opacity = 0;
+  leaderSince = startTime;
+  currentLeader = -1;
+
+  // Auto-collapse betting drawer on smaller screens so 3D track is unobstructed
+  if (window.innerWidth < 1100) {
+    panelBoard.classList.add("collapsed");
+  }
+
+  gameState = STATE.COUNTDOWN;
+  showCountdown(() => {
+    gameState = STATE.RACING;
+    audio.speak("And they are off!", true);
+  });
+}
+
+function resetAllToSetup() {
+  startModal.style.display = "flex";
+  panelBoard.classList.remove("collapsed");
+  rollRaceTypeAndDistance(true);
+  setWeatherRandom();
+  players.length = 0;
+  renderPlayersUI();
+  makeCard();
+  freshRaceMeta();
+  seedHorses();
+  gameState = STATE.BOARD;
+  banner.style.display = "none";
+  btnStart.style.display = "none";
+}
+
+function instantReplay() {
+  audio.unlock();
+  setWeatherRandom();
+  freshRaceMeta();
+  seedHorses(baseCard);
+  gameState = STATE.WAIT;
+  banner.style.display = "none";
+  btnStart.style.display = "inline-block";
+  comEl.textContent = "Ready for an instant replay — same runners at the starting gate!";
+}
+
+/* ======================== Commentary ======================== */
+const leadName = () => horses[horses.reduce((a, _, i) => horses[i].x > horses[a].x ? i : a, 0)].name;
+const pickRunner = () => pick(horses).name;
+
+function randomComment() {
+  const acts = [
+    () => `${leadName()} holds the call — tempo honest.`,
+    () => `${pickRunner()} sneaks to the rail for cover.`,
+    () => `${pickRunner()} edges wider looking for daylight.`,
+    () => `Wind gust across the turf — silks rippling!`,
+    () => `${pickRunner()} travelling sweetly on the bit.`,
+    () => `${pickRunner()} asked to pick up; response is there.`,
+    () => `Pack compresses — swings and roundabouts!`
+  ];
+  return pick(acts)();
+}
+
+function milestoneCalls() {
+  const lead = Math.max(...horses.map(h => h.x));
+  const prog = (lead - START_X) / RACE_DISTANCE;
+  let milestone = null;
+  if (prog > 0.25 && prog < 0.27) milestone = `Quarter gone — ${leadName()} shows the way.`;
+  else if (prog > 0.50 && prog < 0.52) milestone = `Halfway home — field well bunched.`;
+  else if (prog > 0.75 && prog < 0.77) milestone = `Three-quarters — moves coming from the pack!`;
+  else if (prog > 0.90 && prog < 0.92) milestone = `Final furlong! ${leadName()} asked for everything!`;
+
+  if (milestone && commentary !== milestone) {
+    commentary = milestone;
+    audio.speak(milestone);
+  }
+}
+
+/* ====================== Rank & Velocity Helpers ====================== */
+function ranksByX() {
+  return [...horses.keys()].sort((a, b) => horses[b].x - horses[a].x);
+}
+function rankOf(i, order) {
+  return order.indexOf(i) + 1;
+}
+function vmaxForDistance() {
+  const t = clamp((raceFurlongs - 5) / (18 - 5), 0, 1);
+  return Math.round(lerp(160, 95, t));
+}
+
+/* ========================== Simulation Dynamics =========================== */
+function advanceHorse(i, dt, now, order) {
+  const h = horses[i];
+  const m = model[i];
+  if (fallen[i] || finishTimes[i] != null) return;
+
+  // Stumble chance
+  if (random() < fallProb * dt * 0.5) {
+    fallen[i] = true;
+    m.momentum = -30;
+    if (scene3d) {
+      scene3d.vfx.emitStumbleBurst(h.x * SIM_TO_M, LANES_Z[i]);
+      scene3d.cameraDirector.addTrauma(0.65);
     }
+    audio.playStumble();
+    return;
+  }
 
-    function renderPlayersUI() {
-      playersUI.innerHTML = '';
-      players.forEach((p, idx) => {
-        const badge = document.createElement('div');
-        badge.className = 'pill';
-        badge.style.cursor = 'pointer';
-        badge.title = 'Click to remove';
-        badge.innerHTML = `<span class="dot" style="background:${horses[p.horse].color}"></span> ${p.name} — ${horses[p.horse].name}`;
-        badge.onclick = () => { players.splice(idx, 1); renderPlayersUI(); rebuildHorseSelect(); };
-        playersUI.appendChild(badge);
-      });
+  // 1. Base pace
+  let target = m.pace;
+
+  // 2. Rank-based rubber banding
+  const rk = rankOf(i, order);
+  const isLeader = (rk === 1);
+  const rankFactor = (rk - 1) / (NUM_HORSES - 1);
+
+  if (!isLeader) {
+    target += lerp(0, 15, rankFactor);
+  } else {
+    const leadGap = (order.length > 1) ? (h.x - horses[order[1]].x) : 0;
+    if (leadGap > 200) target -= 10;
+    if (leadGap > 400) target -= 20;
+  }
+
+  // 3. Burst mechanic
+  if (m.boostT > 0) {
+    m.boostT -= dt;
+    target += 25 * m.aggression;
+    m.fatigue += dt * 2.5;
+  } else {
+    const burstChance = (rk > 1) ? 0.015 : 0.005;
+    if (random() < burstChance && m.fatigue < 4) {
+      m.boostT = rand(1.5, 3.0);
+      commentary = `${h.name} surges into overdrive!`;
+      commentaryTs = now;
+      audio.playBurstSurge();
     }
+    if (m.fatigue > 0) m.fatigue -= dt * 0.2;
+  }
 
-    /* ===================== Flow ==================== */
-    function chooseHorse(i) {
-      if (![STATE.PICK, STATE.BOARD, STATE.WAIT].includes(gameState)) return;
-      playerPick = i;
-      commentary = `You picked ${horses[i].name}! Press Space or Start.`;
-      comEl.textContent = commentary;
-      [...tbody.children].forEach((tr, idx) => tr.style.background = idx === i ? 'rgba(122,162,255,.15)' : 'transparent');
-      gameState = STATE.WAIT;
-      btnStart.style.display = 'inline-block';
-    }
+  // 4. Late race stamina fade
+  const prog = (h.x - START_X) / RACE_DISTANCE;
+  if (prog > 0.7) {
+    const staminaPenalty = (1.0 - m.stamina) * 50 * prog;
+    target -= staminaPenalty;
+    target -= m.fatigue * 2;
+  }
 
-    function setWeatherRandom() {
-      const w = pick(["Clear", "Rain", "Wind", "Rain & Wind"]);
-      weather = w;
+  // 5. Environmental factors
+  target = target * speedFactor + windForce * 0.3;
 
-      if (w === "Clear") { fallProb = BASE_FALL_PROB; speedFactor = 1; windForce = 0; }
-      if (w === "Rain") { fallProb = BASE_FALL_PROB * 1.5; speedFactor = 0.9; windForce = 0; }
-      if (w === "Wind") { fallProb = BASE_FALL_PROB; speedFactor = 1; windForce = rand(-5, 5); }
-      if (w === "Rain & Wind") { fallProb = BASE_FALL_PROB * 1.5; speedFactor = 0.85; windForce = rand(-5, 5); }
-
-      const wTxt = `${(weatherIcons[w] ?? "")} ${w}`;
-      weatherChip.textContent = `Weather: ${w}`;
-      weatherTop.textContent = `Weather: ${w}`;
-
-      // refresh Race Card row to show updated weather icon
-      rollRaceTypeAndDistance(false);
-    }
-
-    function showCountdown(startCb) {
-      let n = 3;
-      countNumEl.textContent = n;
-      countdownEl.style.display = 'flex';
-      const iv = setInterval(() => {
-        n--; if (n <= 0) { clearInterval(iv); countdownEl.style.display = 'none'; startCb(); return; }
-        countNumEl.textContent = n;
-      }, 700);
-    }
-
-    function startRace() {
-      if (gameState !== STATE.WAIT) return;
-      // If you want the weather to stay as shown on setup, comment out the next line.
-      setWeatherRandom();
-
-      horses.forEach((h, i) => { h.x = START_X; fallen[i] = false; finishTimes[i] = undefined; jumpStart[i] = 0; });
-      model.forEach(m => { m.fatigue = 0; m.momentum = 0; m.surgeT = rand(6.5, 12.5); m.boostT = 0; });
-      startTime = performance.now();
-      lastTs = startTime; commentaryTs = startTime; commentary = "They're off!"; comEl.textContent = commentary;
-      banner.style.display = 'none';
-      btnStart.style.display = 'none';
-      flashEl.style.opacity = 0;
-      leaderSince = startTime; currentLeader = -1;
-      gameState = STATE.COUNTDOWN;
-      showCountdown(() => { gameState = STATE.RACING; });
-    }
-
-    function resetAllToSetup() {
-      startModal.style.display = 'flex';
-      rollRaceTypeAndDistance(true);
-      setWeatherRandom(); // do not overwrite to Clear
-      players.length = 0; renderPlayersUI();
-      makeCard(); freshRaceMeta(); seedHorses(); gameState = STATE.BOARD;
-      banner.style.display = 'none'; btnStart.style.display = 'none';
-    }
-
-    function instantReplay() {
-      setWeatherRandom(); // do not overwrite to Clear
-      freshRaceMeta(); seedHorses(baseCard); gameState = STATE.WAIT;
-      banner.style.display = 'none'; btnStart.style.display = 'inline-block';
-      comEl.textContent = 'Ready for an instant replay — same runners!';
-    }
-
-    /* =========================== Drawing ============================ */
-    function clearAndTileGrass() {
-      ctx.clearRect(0, 0, W, H);
-      if (!ASSETS.ready) { drawFallbackGrass(); return; }
-      const img = ASSETS.grass, scale = (H / img.height), tileW = img.width * scale;
-      const offset = -((camX * 0.6) % tileW);
-      for (let x = offset - tileW; x < W + tileW; x += tileW) {
-        ctx.drawImage(img, 0, 0, img.width, img.height, x, 0, tileW, H);
-      }
-    }
-    function drawFallbackGrass() {
-      const grad = ctx.createLinearGradient(0, 0, 0, H);
-      grad.addColorStop(0, '#6cc06c'); grad.addColorStop(1, '#1b8c33');
-      ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
-    }
-
-    function drawLaneMarkers() {
-      ctx.setLineDash([10, 12]); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,.20)';
-      for (let i = 0; i < LANES_Y.length - 1; i++) {
-        const y = (LANES_Y[i] + LANES_Y[i + 1]) / 2 + 30;
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-      }
-      ctx.setLineDash([]);
-    }
-
-    function drawFenceAt(yCenter) {
-      const yTop = yCenter - 6, yBot = yCenter + 6;
-      ctx.strokeStyle = '#eaf0ff'; ctx.lineWidth = 2; ctx.globalAlpha = .95;
-      ctx.beginPath(); ctx.moveTo(0, yTop); ctx.lineTo(W, yTop); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(0, yBot); ctx.lineTo(W, yBot); ctx.stroke();
-      const postStride = 60; const phase = (camX * 0.6) % postStride;
-      ctx.fillStyle = '#ffffff';
-      for (let x = -phase; x <= W + postStride; x += postStride) {
-        ctx.fillRect(x - 2, yTop - 8, 4, (yBot - yTop) + 16);
-        ctx.beginPath(); ctx.arc(x, yTop - 8, 4, 0, Math.PI * 2); ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    function drawVerticalHedges() {
-      if (!useHedges) return;
-      ctx.save();
-      HEDGES_X.forEach(hx => {
-        if (hx >= FINISH_X - 2) return; // safety: never after finish
-        const sx = hx - camX;
-        if (sx < -40 || sx > W + 40) return;
-        LANES_Y.forEach((ly) => {
-          const y = ly + 26;
-          circle(sx - 12, y + 6, 14, '#0f5a27');
-          circle(sx + 2, y + 2, 18, '#177839');
-          circle(sx + 14, y, 10, '#1aa04a');
-          ctx.fillStyle = 'rgba(255,255,255,.28)';
-          ctx.fillRect(sx - 2, y - 10, 4, 20);
-        });
-      });
-      ctx.restore();
-      function circle(cx, cy, r, col) { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill(); }
-    }
-
-    function drawCheckeredLine(x, label) {
-      const sx = x - camX; if (sx < -40 || sx > W + 40) return;
-      const size = 8, top = 0, bottom = H;
-      for (let y = top; y < bottom; y += size) {
-        const col = Math.floor(y / size) % 2 ? '#000' : '#fff';
-        ctx.fillStyle = col; ctx.fillRect(sx - 3, y, 6, size);
-      }
-      ctx.font = '700 12px Inter';
-      const tw = ctx.measureText(label).width + 10;
-      ctx.fillStyle = 'rgba(0,0,0,.65)'; ctx.fillRect(sx - tw / 2, 12, tw, 16);
-      ctx.fillStyle = '#fff'; ctx.fillText(label, sx - tw / 2 + 5, 24);
-    }
-
-    function drawHorse(h, i, now) {
-      let y = h.laneY;
-      if (now - jumpStart[i] < JUMP_DUR) {
-        const t = (now - jumpStart[i]) / JUMP_DUR; y -= Math.sin(t * Math.PI) * JUMP_H;
-      }
-      y += Math.sin((now * 0.008) + (i * 1.1)) * 1.2;
-      const x = h.x - camX;
-
-      ctx.fillStyle = 'rgba(0,0,0,.35)';
-      ctx.beginPath(); ctx.ellipse(x + 40, y + 52, 34, 10, 0, 0, Math.PI * 2); ctx.fill();
-
-      if (ASSETS.ready && h.img && h.img.complete) {
-        ctx.drawImage(h.img, x - 10, y - 30, 110, 100);
-      } else {
-        ctx.fillStyle = h.color; roundRect(x, y, 84, 30, 18);
-        ctx.fillStyle = shade(h.color, -18);
-        ctx.beginPath(); ctx.moveTo(x + 74, y + 8); ctx.lineTo(x + 98, y + 16); ctx.lineTo(x + 74, y + 26); ctx.closePath(); ctx.fill();
-        ctx.fillStyle = shade(h.color, -32);
-        ctx.fillRect(x + 10, y + 30, 6, 16); ctx.fillRect(x + 24, y + 30, 6, 16); ctx.fillRect(x + 54, y + 30, 6, 16); ctx.fillRect(x + 68, y + 30, 6, 16);
-        ctx.fillStyle = '#111b3a'; ctx.beginPath(); ctx.arc(x + 32, y + 6, 7, 0, Math.PI * 2); ctx.fill();
-      }
-
-      const label = h.name;
-      ctx.font = '600 12px Inter';
-      let tw = ctx.measureText(label).width + 10;
-      ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(x - 2, y - 18, tw, 16);
-      ctx.fillStyle = '#eaf0ff'; ctx.fillText(label, x + 3, y - 6);
-
-      if (fallen[i]) {
-        const text = 'Fell!'; const w = ctx.measureText(text).width + 10;
-        ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(x + 10, y + 56, w, 16);
-        ctx.fillStyle = '#ff6b8a'; ctx.font = '700 12px Inter'; ctx.fillText(text, x + 15, y + 68);
-      } else {
-        // Leader Indicator
-        if (i === currentLeader && finishTimes[i] == null) {
-          ctx.font = '24px serif';
-          ctx.fillText('👑', x + 35, y - 45);
-        }
-        // Boost Indicator
-        if (model[i] && model[i].boostT > 0) {
-          ctx.fillStyle = '#FBBC04';
-          ctx.font = '900 14px Inter';
-          ctx.fillText('>>>', x + 90, y);
-        }
-      }
-
-      function roundRect(rx, ry, w, h, r) {
-        const rr = Math.min(r, h / 2, w / 2); ctx.beginPath();
-        ctx.moveTo(rx + rr, ry); ctx.lineTo(rx + w - rr, ry); ctx.quadraticCurveTo(rx + w, ry, rx + w, ry + rr);
-        ctx.lineTo(rx + w, ry + h - rr); ctx.quadraticCurveTo(rx + w, ry + h, rx + w - rr, ry + h);
-        ctx.lineTo(rx + rr, ry + h); ctx.quadraticCurveTo(rx, ry + h, rx, ry + h - rr);
-        ctx.lineTo(rx, ry + rr); ctx.quadraticCurveTo(rx, ry, rx + rr, ry); ctx.closePath(); ctx.fill();
-      }
-    }
-
-    /* Minimap */
-    function drawMinimap() {
-      const panelX = 14, panelY = H - 88, panelW = W - 28, panelH = 70;
-      ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(panelX, panelY, panelW, panelH);
-      ctx.strokeStyle = 'rgba(255,255,255,.2)'; ctx.strokeRect(panelX, panelY, panelW, panelH);
-
-      const x0 = panelX + 16, x1 = panelX + panelW - 16, y = panelY + panelH / 2;
-      const g = ctx.createLinearGradient(x0, y, x1, y); g.addColorStop(0, '#8cb1ff'); g.addColorStop(1, '#56f0c1');
-      ctx.strokeStyle = g; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
-
-      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x0, y, 4, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x1, y, 4, 0, Math.PI * 2); ctx.fill();
-
-      if (useHedges) {
-        ctx.fillStyle = '#1aa04a';
-        HEDGES_X.forEach(hx => {
-          if (hx >= FINISH_X) return;
-          const t = clamp((hx - START_X) / RACE_DISTANCE, 0, 1);
-          const xi = lerp(x0, x1, t);
-          ctx.beginPath(); ctx.arc(xi, y, 3.5, 0, Math.PI * 2); ctx.fill();
-        });
-      }
-
-      const leaderIdx = horses.reduce((best, _, idx) => horses[idx].x > horses[best].x ? idx : best, 0);
-      horses.forEach((h, i) => {
-        const t = clamp((h.x - START_X) / RACE_DISTANCE, 0, 1);
-        const xi = lerp(x0, x1, t);
-        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(xi, y, 6, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = COLORS[i % COLORS.length]; ctx.beginPath(); ctx.arc(xi, y, 4.5, 0, Math.PI * 2); ctx.fill();
-        if (i === leaderIdx) {
-          ctx.strokeStyle = 'rgba(255,215,106,.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(xi, y, 8.5, 0, Math.PI * 2); ctx.stroke();
-        }
-      });
-    }
-
-    /* ======================== Commentary ======================== */
-    function randomComment() {
-      const acts = [
-        () => `${leadName()} holds the call — tempo honest.`,
-        () => `${pickRunner()} sneaks to the rail for cover.`,
-        () => `${pickRunner()} edges wider looking for daylight.`,
-        () => `Wind gust — some heads bobbing!`,
-        () => `${pickRunner()} travelling sweetly on the steel.`,
-        () => `${pickRunner()} asked to pick up; response is there.`,
-        () => `Pack compresses — swings and roundabouts!`,
-      ];
-      return pick(acts)();
-    }
-    const leadName = () => horses[horses.reduce((a, _, i) => horses[i].x > horses[a].x ? i : a, 0)].name;
-    const pickRunner = () => pick(horses).name;
-
-    function milestoneCalls() {
-      const lead = Math.max(...horses.map(h => h.x));
-      const prog = (lead - START_X) / RACE_DISTANCE;
-      if (prog > 0.25 && prog < 0.27) commentary = `Quarter gone — ${leadName()} shows the way.`;
-      else if (prog > 0.50 && prog < 0.52) commentary = `Halfway home — field well bunched.`;
-      else if (prog > 0.75 && prog < 0.77) commentary = `Three-quarters — moves coming from the pack!`;
-      else if (prog > 0.90 && prog < 0.92) commentary = `Final furlong! ${leadName()} asked for everything!`;
-    }
-
-    /* ====================== Rank helpers ====================== */
-    function ranksByX() { return [...horses.keys()].sort((a, b) => horses[b].x - horses[a].x); }
-    function rankOf(i, order) { return order.indexOf(i) + 1; }
-
-    /* -------- Distance-aware velocity cap -------- */
-    function vmaxForDistance() {
-      // 5f → ~160 px/s (sprint!), 18f → ~95 px/s (marathon)
-      const t = clamp((raceFurlongs - 5) / (18 - 5), 0, 1);
-      return Math.round(lerp(160, 95, t));
-    }
-
-    /* ========================== Dynamics =========================== */
-    function advanceHorse(i, dt, now, order) {
-      const h = horses[i], m = model[i];
-      if (fallen[i] || finishTimes[i] != null) return;
-
-      // Stumble chance (simulated fall)
-      if (Math.random() < fallProb * dt * 0.5) {
-        fallen[i] = true; m.momentum = -30;
-        // Add explosion of particles
-        for (let k = 0; k < 20; k++) addParticle(h.x + 50, h.laneY + 40, '#ff6b8a', 20, rand(0.5, 1.5));
-        shake = 10; // Trauma
-        return;
-      }
-
-      // AI Logic:
-      // 1. Base pace
-      let target = m.pace;
-
-      // 2. Rank-based rubber banding (Catch-up logic)
-      const rk = rankOf(i, order);
-      const isLeader = (rk === 1);
-      const rankFactor = (rk - 1) / (NUM_HORSES - 1); // 0 (leader) to 1 (last)
-
-      // Catch up: Last place gets a boost, Leader gets a drag if they are too far ahead
-      if (!isLeader) {
-        target += lerp(0, 15, rankFactor); // Up to +15 speed for last place
-      } else {
-        // Leader drag - prevents runaway wins
-        const leadGap = (order.length > 1) ? (h.x - horses[order[1]].x) : 0;
-        if (leadGap > 200) target -= 10; // Slow down if way ahead
-        if (leadGap > 400) target -= 20; // Drastically slow down
-      }
-
-      // 3. "Burst" mechanic - Random surges of energy
-      // Cooldown management
-      if (m.boostT > 0) {
-        m.boostT -= dt;
-        target += 25 * m.aggression; // HUGE burst speed
-        // Drain stamina faster during burst
-        m.fatigue += dt * 2.5;
-
-        // Visuals: Particles
-        if (Math.random() < 0.5) addParticle(h.x, h.laneY + 60, '#fff', 50, 0.4);
-        if (Math.random() < 0.5) addParticle(h.x, h.laneY + 60, h.color, 50, 0.4);
-      } else {
-        // Chance to trigger burst if behind or just random aggression
-        // Higher chance if behind (0.02 vs 0.005)
-        const burstChance = (rk > 1) ? 0.015 : 0.005;
-        if (Math.random() < burstChance && m.fatigue < 4) { // Only burst if not too tired
-          m.boostT = rand(1.5, 3.0); // 1.5s to 3s burst
-          commentary = `${h.name} is making a move!`;
-          commentaryTs = now;
-        }
-
-        // Recovery
-        if (m.fatigue > 0) m.fatigue -= dt * 0.2;
-      }
-
-      // 4. Fatigue / Stamina fade
-      // As race progresses, low stamina horses fade harder
-      const prog = (h.x - START_X) / RACE_DISTANCE;
-      if (prog > 0.7) {
-        // Late race fade
-        const staminaPenalty = (1.0 - m.stamina) * 50 * prog; // up to -25 speed
-        target -= staminaPenalty;
-
-        // Fatigue penalty
-        target -= m.fatigue * 2;
-      }
-
-      // 5. Environmental factors
-      target = target * speedFactor + windForce * 0.3;
-
-      // Hedges logic (keep existing)
-      // Hedges logic
-      if (useHedges) {
-        for (const hx of HEDGES_X) {
-          const d = hx - h.x;
-          const arcOver = (now - jumpStart[i]) > JUMP_DUR;
-
-          // Auto-jump logic
-          if (d > 0 && d < 120 && arcOver) {
-            // Trigger jump
-            if (d < 90) {
-              jumpStart[i] = now;
-              // Dust for jump
-              for (let k = 0; k < 12; k++) addParticle(h.x + 30, h.laneY + 70, '#5e3e29', 15, 0.6);
-            }
+  // 6. Hedges auto-jump trigger
+  if (useHedges) {
+    for (const hx of HEDGES_X) {
+      const d = hx - h.x;
+      const arcOver = (now - jumpStart[i]) > JUMP_DUR;
+      if (d > 0 && d < 120 && arcOver) {
+        if (d < 90) {
+          jumpStart[i] = now;
+          if (scene3d) {
+            scene3d.vfx.emitHedgeTakeoff(h.x * SIM_TO_M, LANES_Z[i]);
           }
+          audio.playJumpBrush();
         }
       }
-
-      // Smooth momentum change
-      m.momentum = lerp(m.momentum, target, 2.0 * dt); // constant acc/dec
-
-      // Cap max speed
-      const maxSpeed = vmaxForDistance() * 1.3;
-      const vx = clamp(m.momentum, 50, maxSpeed);
-
-      h.x += vx * dt;
-
-      // Dust particles based on speed
-      if (vx > 110 && Math.random() < 0.4) {
-        addParticle(h.x, h.laneY + 75, '#6b8c42', vx * 0.5, 0.3);
-      }
-
-      if (h.x >= FINISH_X && finishTimes[i] == null) {
-        finishTimes[i] = now - startTime;
-        shake = 10;
-        for (let k = 0; k < 60; k++) addParticle(h.x, h.laneY, pick(COLORS), rand(-60, 60), 2.5);
-      }
     }
+  }
 
-    /* Speed Lines Effect */
-    function drawSpeedLines(now) {
-      if (gameState !== STATE.RACING) return;
-      const speed = 10;
-      ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-      ctx.lineWidth = 2;
-      const count = 10;
-      for (let i = 0; i < count; i++) {
-        const x = (now * speed + i * 200) % W;
-        const y = (i * 50 + now * 0.1) % H;
-        const len = rand(50, 150);
-        const xPos = W - x; // Move left
-        ctx.beginPath();
-        ctx.moveTo(xPos, y);
-        ctx.lineTo(xPos - len, y);
-        ctx.stroke();
-      }
+  // Smooth momentum change
+  m.momentum = lerp(m.momentum, target, 2.0 * dt);
+  const maxSpeed = vmaxForDistance() * 1.3;
+  const vx = clamp(m.momentum, 50, maxSpeed);
+
+  h.x += vx * dt;
+
+  // Finish Line Crossing
+  if (h.x >= FINISH_X && finishTimes[i] == null) {
+    finishTimes[i] = now - startTime;
+    if (!photoFinishTriggered) {
+      photoFinishTriggered = true;
+      slowMoTimer = 0.72; // Brief dramatic photo-finish slow-motion on 1st place crossing
+      triggerPhotoFlash();
+      audio.playPhotoFinishShutter();
     }
-
-    /* ========================== Main loop =========================== */
-    function tick(now) {
-      requestAnimationFrame(tick);
-      if (!lastTs) lastTs = now;
-      const dt = (now - lastTs) / 1000; lastTs = now;
-
-      if (gameState === STATE.RACING) {
-        const order = ranksByX();
-        const leaderIdx = order[0];
-        if (leaderIdx !== currentLeader) {
-          currentLeader = leaderIdx;
-          leaderSince = now;
-          commentary = `${horses[leaderIdx].name} takes the lead!`;
-          commentaryTs = now;
-        }
-
-        let fallMsg = false;
-        for (let i = 0; i < NUM_HORSES; i++) {
-          const before = horses[i].x;
-          advanceHorse(i, dt, now, order);
-          if (fallen[i] && before !== horses[i].x) { fallMsg = true; commentary = `Oh no! ${horses[i].name} stumbled!`; commentaryTs = now; }
-        }
-
-        if (now - commentaryTs > commentaryInterval && !fallMsg) {
-          commentary = randomComment();
-          commentaryTs = now;
-        }
-        milestoneCalls();
-        comEl.textContent = commentary;
-
-        const leadX = Math.max(...horses.map(h => h.x));
-        // Camera should show more of shorter races, less of longer ones
-        const viewAhead = W * lerp(0.45, 0.65, clamp((raceFurlongs - 5) / (18 - 5), 0, 1));
-        const maxCam = Math.max(0, FINISH_X - viewAhead);
-        camX = lerp(camX, Math.min(maxCam, Math.max(0, leadX - 240)), 0.09);
-
-        const allDone = horses.every((_, i) => fallen[i] || finishTimes[i] != null);
-        if (allDone) { gameState = STATE.FINISHED; showResults(now); }
-      }
-
-      if (shake > 0) {
-        const s = shake;
-        ctx.save();
-        ctx.translate(rand(-s, s), rand(-s, s));
-        shake = shake * 0.9 - 0.1;
-        if (shake < 0) shake = 0;
-      }
-
-      clearAndTileGrass();
-      drawLaneMarkers();
-      drawFenceAt(34);
-      drawFenceAt(H - 34);
-
-      // Background particles (clouds?) - simplified
-      if (gameState === STATE.RACING) drawSpeedLines(now);
-
-      drawCheckeredLine(START_X, 'START');
-      drawCheckeredLine(FINISH_X, 'FINISH');
-      drawVerticalHedges();
-
-      // Draw particles (below horses)
-      updateAndDrawParticles(dt);
-
-      for (let i = 0; i < NUM_HORSES; i++) drawHorse(horses[i], i, now);
-
-      drawMinimap();
-      if (weather.includes('Rain')) drawRain(now);
-
-      if (shake > 0) ctx.restore();
+    if (scene3d) {
+      scene3d.cameraDirector.addTrauma(0.45);
+      scene3d.vfx.emitFinishConfetti(FINISH_X * SIM_TO_M, LANES_Z[i]);
     }
+  }
+}
 
-    function updateAndDrawParticles(dt) {
-      for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        p.life -= dt;
-        p.x += p.vx * dt;
-        p.y += p.vy * dt;
-        p.vy += 20 * dt; // gravity
+function triggerPhotoFlash() {
+  flashEl.style.transition = "none";
+  flashEl.style.opacity = 0.85;
+  requestAnimationFrame(() => {
+    flashEl.style.transition = "opacity 650ms ease";
+    flashEl.style.opacity = 0;
+  });
+}
 
-        if (p.life <= 0) {
-          particles.splice(i, 1);
-          continue;
-        }
+/* ========================== 2D HUD Minimap Overlay =========================== */
+function drawMinimapOverlay() {
+  if (!scene3d || !scene3d.minimapCtx) return;
+  const ctx = scene3d.minimapCtx;
+  const W = scene3d.minimapW || 420;
+  const H = scene3d.minimapH || 48;
 
-        ctx.globalAlpha = p.life / p.maxLife;
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x - camX, p.y, 2 + (p.life * 2), 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1.0;
-    }
+  ctx.clearRect(0, 0, W, H);
 
-    function drawRain(now) {
-      const n = Math.floor(W * 0.32);
-      ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = 1;
-      for (let i = 0; i < n; i++) {
-        const x = (i * 19 + (now * 0.25)) % W; const y = (i * 31 + (now * 0.6)) % H;
-        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 2, y + 8); ctx.stroke();
-      }
-    }
+  const x0 = 18;
+  const x1 = W - 18;
+  const y = H / 2;
 
-    function showResults(now) {
-      flashEl.style.transition = 'none';
-      flashEl.style.opacity = 0.9;
-      requestAnimationFrame(() => { flashEl.style.transition = 'opacity 600ms ease'; flashEl.style.opacity = 0; });
+  // Track progress rail
+  const g = ctx.createLinearGradient(x0, y, x1, y);
+  g.addColorStop(0, "#7aa2ff");
+  g.addColorStop(1, "#56f0c1");
+  ctx.strokeStyle = g;
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(x0, y);
+  ctx.lineTo(x1, y);
+  ctx.stroke();
 
-      const finishers = horses.map((h, i) => ({ i, t: finishTimes[i] })).filter(o => o.t != null).sort((a, b) => a.t - b.t);
-      const fallers = horses.map((h, i) => ({ i })).filter(o => fallen[o.i]);
-      const order = [...finishers.map(o => o.i), ...fallers.map(o => o.i)];
-      const first = finishers[0]?.i;
-      bannerTitle.textContent = first != null ? `Winner: ${horses[first].name}` : 'No horse finished!';
-      bannerGrid.innerHTML = '';
-      order.forEach((idx, rank) => {
-        const place = ['1st', '2nd', '3rd', '4th', '5th'][rank] || `${rank + 1}th`;
-        const left = document.createElement('div');
-        left.innerHTML = `<span class="dot" style="background:${horses[idx].color}"></span> ${place}`;
-        const right = document.createElement('div');
-        right.textContent = horses[idx].name + (fallen[idx] ? ' — Fell' : '');
-        bannerGrid.appendChild(left); bannerGrid.appendChild(right);
-      });
-      if (players.length) {
-        const winners = players.filter(p => p.horse === first).map(p => p.name);
-        playersResultEl.textContent = winners.length ? `🏆 Player win: ${winners.join(', ')}!` : `No player picked the winner.`;
-      } else if (playerPick != null) {
-        playersResultEl.textContent = (first === playerPick) ? `🏆 You picked ${horses[playerPick].name} — winner!` : `You picked ${horses[playerPick].name}. Better luck next time.`;
-      } else playersResultEl.textContent = '';
-      banner.style.display = 'block';
-    }
+  // Start & Finish nodes
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(x0, y, 4.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(x1, y, 4.5, 0, Math.PI * 2);
+  ctx.fill();
 
-    /* ========================= Controls/UI ========================= */
-    window.addEventListener('keydown', (e) => {
-      if (e.key === ' ') {
-        if (gameState === STATE.WAIT) startRace();
-        else if (gameState === STATE.FINISHED) instantReplay();
-      }
-      if (e.key === 'f' || e.key === 'F') { useHedges = false; rollRaceTypeAndDistance(false); freshRaceMeta(); buildHedges(); }
-      if (e.key === 'h' || e.key === 'H') { useHedges = true; rollRaceTypeAndDistance(false); freshRaceMeta(); buildHedges(); }
-      if ([STATE.PICK, STATE.BOARD, STATE.WAIT].includes(gameState)) {
-        const n = parseInt(e.key, 10); if (n >= 1 && n <= NUM_HORSES) chooseHorse(n - 1);
-      }
+  // Hedge ticks
+  if (useHedges) {
+    ctx.fillStyle = "#22c55e";
+    HEDGES_X.forEach(hx => {
+      if (hx >= FINISH_X) return;
+      const t = clamp((hx - START_X) / RACE_DISTANCE, 0, 1);
+      const xi = lerp(x0, x1, t);
+      ctx.fillRect(xi - 1.5, y - 8, 3, 16);
     });
-    document.getElementById('btnFlat').onclick = () => { useHedges = false; rollRaceTypeAndDistance(false); freshRaceMeta(); };
-    document.getElementById('btnHedges').onclick = () => { useHedges = true; rollRaceTypeAndDistance(false); freshRaceMeta(); };
-    document.getElementById('btnContinue').onclick = () => { gameState = STATE.PICK; commentary = 'Pick a horse (1–5) or click a row.'; comEl.textContent = commentary; };
+  }
 
-    document.getElementById('btnRestartFull').onclick = resetAllToSetup;
-    document.getElementById('btnInstantReplay').onclick = instantReplay;
-    document.getElementById('btnPlayAgain').onclick = instantReplay;
-    document.getElementById('btnChangeCard').onclick = () => { makeCard(); seedHorses(); gameState = STATE.PICK; banner.style.display = 'none'; comEl.textContent = 'New card — pick a horse.'; };
-    btnStart.onclick = startRace;
+  // Horse position pips
+  const leaderIdx = horses.reduce((best, _, idx) => horses[idx].x > horses[best].x ? idx : best, 0);
+  horses.forEach((h, i) => {
+    const t = clamp((h.x - START_X) / RACE_DISTANCE, 0, 1);
+    const xi = lerp(x0, x1, t);
+    ctx.fillStyle = "#0b0e17";
+    ctx.beginPath();
+    ctx.arc(xi, y, 7, 0, Math.PI * 2);
+    ctx.fill();
 
-    document.getElementById('btnAddPlayer').onclick = () => {
-      const name = (playerNameInp.value || '').trim();
-      const horse = parseInt(playerHorseSel.value, 10);
-      if (!name) return alert('Enter a player name');
-      if (players.length >= NUM_HORSES) return alert('Max players reached for this race.');
-      if (players.some(p => p.horse === horse)) return alert('That horse is already taken.');
-      players.push({ name, horse });
-      playerNameInp.value = '';
-      renderPlayersUI(); rebuildHorseSelect();
-      gameState = STATE.WAIT; btnStart.style.display = 'inline-block';
-      comEl.textContent = 'Players ready. Press Space or Start.';
-    };
+    ctx.fillStyle = COLORS[i % COLORS.length];
+    ctx.beginPath();
+    ctx.arc(xi, y, 5.2, 0, Math.PI * 2);
+    ctx.fill();
 
-    document.getElementById('btnQuickStart').onclick = () => {
-      startModal.style.display = 'none';
-      rollRaceTypeAndDistance(true);     // randomize type + distance
-      setWeatherRandom();                 // randomize weather
-      freshRaceMeta(); seedHorses();
-      if (players.length > 0) { gameState = STATE.WAIT; btnStart.style.display = 'inline-block'; comEl.textContent = 'Players ready. Press Space or Start.'; }
-      else { gameState = STATE.PICK; comEl.textContent = 'Pick a horse by clicking a row or pressing 1–5.'; }
-    };
+    if (i === leaderIdx) {
+      ctx.strokeStyle = "#ffd76a";
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.arc(xi, y, 9.5, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  });
+}
 
-    /* ============================ Boot ============================= */
-    canvas = document.getElementById('game'); ctx = canvas.getContext('2d'); resize();
-    window.addEventListener('resize', resize);
-    rollRaceTypeAndDistance(true); // sets distance & type + builds hedges
-    setWeatherRandom();            // sets weather & updates chips/card
-    makeCard(); freshRaceMeta(); seedHorses(); renderPlayersUI();
-    requestAnimationFrame(tick);
+/* ========================== Results Modal =========================== */
+function showResults() {
+  audio.playWinnerFanfare();
+
+  const finishers = horses
+    .map((h, i) => ({ i, t: finishTimes[i] }))
+    .filter(o => o.t != null)
+    .sort((a, b) => a.t - b.t);
+  const fallers = horses
+    .map((h, i) => ({ i }))
+    .filter(o => fallen[o.i]);
+  const order = [...finishers.map(o => o.i), ...fallers.map(o => o.i)];
+  const first = finishers[0]?.i;
+
+  bannerTitle.textContent = first != null ? `🏆 Winner: ${horses[first].name}` : "No horse finished!";
+  if (first != null) {
+    audio.speak(`Winner is ${horses[first].name}!`, true);
+  }
+
+  bannerGrid.innerHTML = "";
+  order.forEach((idx, rank) => {
+    const place = ["1st", "2nd", "3rd", "4th", "5th"][rank] || `${rank + 1}th`;
+    const left = document.createElement("div");
+    left.innerHTML = `<span class="dot" style="background:${horses[idx].color}"></span> <b>${place}</b>`;
+    const right = document.createElement("div");
+    const timeStr = finishTimes[idx] != null ? ` (${(finishTimes[idx] / 1000).toFixed(2)}s)` : "";
+    right.textContent = horses[idx].name + (fallen[idx] ? " — Fell" : timeStr);
+    bannerGrid.appendChild(left);
+    bannerGrid.appendChild(right);
+  });
+
+  if (players.length) {
+    const winners = players.filter(p => p.horse === first).map(p => p.name);
+    playersResultEl.textContent = winners.length
+      ? `🏆 Winning Ticket: ${winners.join(", ")}!`
+      : `No player backed the winner this race.`;
+  } else if (playerPick != null) {
+    playersResultEl.textContent = (first === playerPick)
+      ? `🏆 You backed ${horses[playerPick].name} (${horses[playerPick].odds}) — WINNER!`
+      : `You backed ${horses[playerPick].name}. Better luck next race!`;
+  } else {
+    playersResultEl.textContent = "";
+  }
+  banner.style.display = "block";
+}
+
+/* ========================== Main Loop =========================== */
+function tick(now) {
+  requestAnimationFrame(tick);
+  if (!lastTs) lastTs = now;
+  let rawDt = Math.min(0.05, (now - lastTs) / 1000);
+  lastTs = now;
+
+  // Brief photo-finish slow-motion effect when winner hits the wire
+  let simDt = rawDt;
+  if (slowMoTimer > 0) {
+    slowMoTimer = Math.max(0, slowMoTimer - rawDt);
+    simDt = rawDt * 0.35;
+  }
+
+  const nowSec = now * 0.001;
+  const order = ranksByX();
+  const leaderIdx = order[0] ?? 0;
+
+  if (gameState === STATE.RACING) {
+    // Open starting stall gates rapidly in first 0.25s
+    gateOpenProgress = clamp(gateOpenProgress + rawDt * 6.5, 0, 1);
+    scene3d.course.setStartingGatesOpen(gateOpenProgress);
+
+    if (leaderIdx !== currentLeader) {
+      currentLeader = leaderIdx;
+      leaderSince = now;
+      commentary = `${horses[leaderIdx].name} takes the lead!`;
+      commentaryTs = now;
+    }
+
+    let fallMsg = false;
+    for (let i = 0; i < NUM_HORSES; i++) {
+      const wasFallen = fallen[i];
+      advanceHorse(i, simDt, now, order);
+      if (fallen[i] && !wasFallen) {
+        fallMsg = true;
+        commentary = `Oh no! ${horses[i].name} stumbled!`;
+        commentaryTs = now;
+        audio.speak(`${horses[i].name} stumbled!`);
+      }
+    }
+
+    if (now - commentaryTs > commentaryInterval && !fallMsg) {
+      commentary = randomComment();
+      commentaryTs = now;
+    }
+    milestoneCalls();
+    comEl.textContent = commentary;
+
+    const allDone = horses.every((_, i) => fallen[i] || finishTimes[i] != null);
+    if (allDone) {
+      gameState = STATE.FINISHED;
+      showResults();
+    }
+  }
+
+  // Update 3D Horse Actors, Hoof Audio & VFX
+  const isWet = weather.includes("Rain");
+  for (let i = 0; i < NUM_HORSES; i++) {
+    const actor = scene3d.horseActors[i];
+    const h = horses[i];
+    const m = model[i];
+    if (!actor || !h || !m) continue;
+
+    const jumpElapsed = now - jumpStart[i];
+    const isJumpActive = jumpStart[i] > 0 && jumpElapsed < JUMP_DUR;
+    const jumpT = isJumpActive ? clamp(jumpElapsed / JUMP_DUR, 0, 1) : 0;
+
+    const res = updateHorseActorAnimation(
+      actor,
+      h,
+      m,
+      {
+        isRacing: gameState === STATE.RACING,
+        hasStarted: gameState === STATE.RACING || gameState === STATE.FINISHED,
+        isJumpActive,
+        jumpT,
+        isFallen: fallen[i],
+        isLeader: i === leaderIdx,
+        windForce
+      },
+      simDt,
+      now
+    );
+
+    if (res.hoofStrike && finishTimes[i] == null) {
+      scene3d.vfx.emitHoofClods(res.worldX, LANES_Z[i], isWet);
+      // Spatial pan relative to camera X
+      const pan = clamp((res.worldX - scene3d.camera.position.x) * 0.08, -0.8, 0.8);
+      const vol = (i === leaderIdx || i === playerPick) ? 0.095 : 0.045;
+      audio.playHoofbeat(pan, isWet, vol);
+    }
+
+    if (gameState === STATE.RACING && m.boostT > 0 && !fallen[i] && finishTimes[i] == null) {
+      scene3d.vfx.emitBurstTrail(res.worldX, res.jumpY, LANES_Z[i], actor.silkColor);
+    }
+  }
+
+  // Update Camera Director, Sun Shadow Frustum, Weather & Vegetation Wind
+  const leadWorldX = (horses[leaderIdx]?.x || START_X) * SIM_TO_M;
+  const raceProgress = clamp(((horses[leaderIdx]?.x || START_X) - START_X) / Math.max(1, RACE_DISTANCE), 0, 1);
+
+  scene3d.cameraDirector.update(rawDt, {
+    gameState,
+    horses,
+    leaderIdx,
+    playerPick,
+    finishSimX: FINISH_X,
+    raceFurlongs,
+    nowSec
+  });
+
+  scene3d.updateSunFollow(leadWorldX);
+  scene3d.course.updateVegetationWind(nowSec, windForce);
+  scene3d.weatherSystem.update(rawDt, scene3d.cameraDirector.currentLookAt.x, weather, windForce);
+  scene3d.vfx.update(simDt);
+  audio.updateAmbience(gameState === STATE.RACING, raceProgress, weather);
+
+  scene3d.renderFrame(rawDt);
+  drawMinimapOverlay();
+
+  // Update Visual Validation Telemetry Drawer if open
+  if (debugDrawer && debugDrawer.style.display !== "none" && telemetryEl) {
+    const t = scene3d.getTelemetry();
+    telemetryEl.textContent = `FPS: ${t.fps} • Draws: ${t.drawCalls} • Tris: ${t.triangles} • Wetness: ${t.wetness} • Seed: ${getSeed()}`;
+  }
+}
+
+/* ========================= Controls & UI Wiring ========================= */
+function updateCameraButtonLabel() {
+  if (!btnCameraMode || !scene3d) return;
+  const info = scene3d.cameraDirector.modeInfo;
+  btnCameraMode.textContent = `${info.icon} Cam: ${info.label}`;
+}
+
+window.addEventListener("keydown", (e) => {
+  if (document.activeElement === playerNameInp || document.activeElement === seedInput) return;
+
+  if (e.key === " ") {
+    e.preventDefault();
+    if (gameState === STATE.WAIT) startRace();
+    else if (gameState === STATE.FINISHED) instantReplay();
+  }
+  if (e.key === "f" || e.key === "F") {
+    useHedges = false;
+    rollRaceTypeAndDistance(false);
+    freshRaceMeta();
+  }
+  if (e.key === "h" || e.key === "H") {
+    useHedges = true;
+    rollRaceTypeAndDistance(false);
+    freshRaceMeta();
+  }
+  if (e.key === "c" || e.key === "C") {
+    scene3d.cameraDirector.cycleMode();
+    updateCameraButtonLabel();
+  }
+  if (e.key === "m" || e.key === "M") {
+    const muted = audio.toggleMute();
+    btnAudioMute.textContent = muted ? "🔇 Muted" : "🔊 Audio";
+  }
+  if (e.key === "v" || e.key === "V") {
+    const voice = audio.toggleVoice();
+    btnVoiceToggle.textContent = voice ? "🎙️ Caller: ON" : "🎙️ Caller: OFF";
+  }
+  if (e.key === "d" || e.key === "D") {
+    const open = debugDrawer.style.display === "none";
+    debugDrawer.style.display = open ? "flex" : "none";
+  }
+  if ([STATE.PICK, STATE.BOARD, STATE.WAIT, STATE.RACING].includes(gameState)) {
+    const n = parseInt(e.key, 10);
+    if (n >= 1 && n <= NUM_HORSES) chooseHorse(n - 1);
+  }
+});
+
+document.getElementById("btnFlat").onclick = () => {
+  useHedges = false;
+  rollRaceTypeAndDistance(false);
+  freshRaceMeta();
+};
+document.getElementById("btnHedges").onclick = () => {
+  useHedges = true;
+  rollRaceTypeAndDistance(false);
+  freshRaceMeta();
+};
+document.getElementById("btnContinue").onclick = () => {
+  gameState = STATE.PICK;
+  commentary = "Pick a horse (1–5) or click a row on the Tote Board.";
+  comEl.textContent = commentary;
+};
+
+document.getElementById("btnRestartFull").onclick = resetAllToSetup;
+document.getElementById("btnInstantReplay").onclick = instantReplay;
+document.getElementById("btnPlayAgain").onclick = instantReplay;
+document.getElementById("btnChangeCard").onclick = () => {
+  makeCard();
+  seedHorses();
+  gameState = STATE.PICK;
+  banner.style.display = "none";
+  panelBoard.classList.remove("collapsed");
+  comEl.textContent = "New race card — pick your runner.";
+};
+btnStart.onclick = startRace;
+
+if (btnToggleBoard) {
+  btnToggleBoard.onclick = () => {
+    panelBoard.classList.toggle("collapsed");
+    setTimeout(() => scene3d && scene3d.resize(), 260);
+  };
+}
+
+if (btnCameraMode) {
+  btnCameraMode.onclick = () => {
+    scene3d.cameraDirector.cycleMode();
+    updateCameraButtonLabel();
+  };
+}
+
+if (btnAudioMute) {
+  btnAudioMute.onclick = () => {
+    const muted = audio.toggleMute();
+    btnAudioMute.textContent = muted ? "🔇 Muted" : "🔊 Audio";
+  };
+}
+
+if (btnVoiceToggle) {
+  btnVoiceToggle.onclick = () => {
+    const voice = audio.toggleVoice();
+    btnVoiceToggle.textContent = voice ? "🎙️ Caller: ON" : "🎙️ Caller: OFF";
+  };
+}
+
+if (btnDebugDrawer) {
+  btnDebugDrawer.onclick = () => {
+    const open = debugDrawer.style.display === "none";
+    debugDrawer.style.display = open ? "flex" : "none";
+  };
+}
+
+// Quality & Visual Validation controls
+const qualitySelect = document.getElementById("qualitySelect");
+if (qualitySelect) {
+  qualitySelect.onchange = (e) => {
+    scene3d.setQualityTier(e.target.value);
+  };
+}
+
+const debugModeSelect = document.getElementById("debugModeSelect");
+if (debugModeSelect) {
+  debugModeSelect.onchange = (e) => {
+    scene3d.setDebugMode(e.target.value);
+  };
+}
+
+const btnApplySeed = document.getElementById("btnApplySeed");
+if (btnApplySeed && seedInput) {
+  btnApplySeed.onclick = () => {
+    const s = setSeed(seedInput.value);
+    seedInput.value = s;
+    rollRaceTypeAndDistance(true);
+    setWeatherRandom();
+    makeCard();
+    freshRaceMeta();
+    seedHorses();
+  };
+}
+
+document.getElementById("btnAddPlayer").onclick = () => {
+  const name = (playerNameInp.value || "").trim();
+  const horse = parseInt(playerHorseSel.value, 10);
+  if (!name) return alert("Enter a player name");
+  if (players.length >= NUM_HORSES) return alert("Max players reached for this race.");
+  if (players.some(p => p.horse === horse)) return alert("That horse is already taken.");
+  players.push({ name, horse });
+  playerNameInp.value = "";
+  renderPlayersUI();
+  rebuildHorseSelect();
+  gameState = STATE.WAIT;
+  btnStart.style.display = "inline-block";
+  comEl.textContent = "Players ready at the paddock. Press Space or Start Race.";
+};
+
+document.getElementById("btnQuickStart").onclick = () => {
+  audio.unlock();
+  startModal.style.display = "none";
+  rollRaceTypeAndDistance(true);
+  setWeatherRandom();
+  freshRaceMeta();
+  seedHorses();
+  if (players.length > 0) {
+    gameState = STATE.WAIT;
+    btnStart.style.display = "inline-block";
+    comEl.textContent = "Players ready. Press Space or Start Race.";
+  } else {
+    gameState = STATE.PICK;
+    comEl.textContent = "Pick a horse by clicking a row on the Tote Board or pressing 1–5.";
+  }
+};
+
+/* ============================ Boot ============================= */
+const canvas3d = document.getElementById("game");
+const minimapCanvas = document.getElementById("minimapCanvas");
+scene3d = new SceneManager3D(canvas3d, minimapCanvas);
+
+if (seedInput) seedInput.value = getSeed();
+rollRaceTypeAndDistance(true);
+setWeatherRandom();
+makeCard();
+freshRaceMeta();
+seedHorses();
+renderPlayersUI();
+updateCameraButtonLabel();
+requestAnimationFrame(tick);
+
+
+window.__horseRallyLoaded = true;
+
   </script>
 </body>
 
