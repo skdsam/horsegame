@@ -143,7 +143,9 @@ export class RacecourseBuilder {
     const finishM = finishSimX * SIM_TO_M;
     const raceLengthM = finishM - startM;
     const totalCourseLength = finishM + 140;
-    const trackWidth = 15.5; // 5 lanes (-5..+5) plus margins
+    const laneSpan = LANES_Z[LANES_Z.length - 1] - LANES_Z[0];
+    const trackWidth = laneSpan + 5.2; // 9 lanes (-8.8..+8.8 = 17.6m) plus turf margins -> 22.8m
+    const railHalfWidth = trackWidth * 0.5 + 0.25; // 11.65m
 
     // 1. Main Striped Racecourse Turf Strip
     this.turfTexture.repeat.set(Math.round(totalCourseLength / 14), 1);
@@ -162,7 +164,7 @@ export class RacecourseBuilder {
     surroundMesh.receiveShadow = true;
     this.trackGroup.add(surroundMesh);
 
-    // 3. Dashed White Lane Dividers between the 5 lanes
+    // 3. Dashed White Lane Dividers between all lanes
     const laneLineMat = new THREE.MeshBasicMaterial({
       color: "#ffffff",
       transparent: true,
@@ -193,17 +195,17 @@ export class RacecourseBuilder {
     finishStrip.position.set(finishM, 0.02, 0);
     this.trackGroup.add(finishStrip);
 
-    // 5. Continuous Post-and-Rail Perimeter Fences (North Z = -7.6m, South Z = +7.6m)
-    this._buildPerimeterRails(totalCourseLength, 7.6);
+    // 5. Continuous Post-and-Rail Perimeter Fences
+    this._buildPerimeterRails(totalCourseLength, railHalfWidth);
 
-    // 6. 5-Bay Starting Stalls with Animated Front Gates at startM
+    // 6. 9-Bay Starting Stalls with Animated Front Gates at startM
     this._buildStartingStalls(startM);
 
     // 7. Finish Archway & Photo-Finish Tower at finishM
     this._buildFinishGantry(finishM, trackWidth);
 
     // 8. Furlong Distance Marker Poles along the inner rail
-    this._buildFurlongMarkers(startM, finishM, raceFurlongs);
+    this._buildFurlongMarkers(startM, finishM, raceFurlongs, railHalfWidth);
 
     // 9. 3D Steeplechase Hedges (when useHedges === true)
     if (useHedges && hedgesSimX.length > 0) {
@@ -211,10 +213,10 @@ export class RacecourseBuilder {
     }
 
     // 10. Grandstand & Crowd along the Final Furlong
-    this._buildGrandstand(finishM);
+    this._buildGrandstand(finishM, railHalfWidth);
 
     // 11. Instanced 3D Turf Grass Tuft Clusters & Perimeter Trees (threejs-procedural-vegetation)
-    this._buildVegetation(totalCourseLength);
+    this._buildVegetation(totalCourseLength, railHalfWidth);
   }
 
   _buildPerimeterRails(totalLength, halfWidth) {
@@ -266,8 +268,11 @@ export class RacecourseBuilder {
       roughness: 0.4
     });
 
-    // Overhead header truss spanning all 5 stalls
-    const totalStallSpan = 13.4;
+    const lanePitch = LANES_Z.length > 1 ? (LANES_Z[1] - LANES_Z[0]) : 2.2;
+    const halfPitch = lanePitch * 0.5;
+    const totalStallSpan = NUM_HORSES * lanePitch + 0.8;
+
+    // Overhead header truss spanning all 9 stalls
     const headerBeam = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.32, totalStallSpan), frameMat);
     headerBeam.position.set(0, 2.75, 0);
     headerBeam.castShadow = true;
@@ -275,18 +280,19 @@ export class RacecourseBuilder {
 
     // Top banner sign
     const signBanner = new THREE.Mesh(
-      new THREE.BoxGeometry(0.14, 0.65, 8.5),
+      new THREE.BoxGeometry(0.14, 0.65, 10.5),
       new THREE.MeshStandardMaterial({ map: createBannerTexture("STARTING STALLS", "#101b3b", "#56f0c1") })
     );
     signBanner.position.set(1.28, 3.25, 0);
     stallGroup.add(signBanner);
 
-    // Dividers and swinging front gates for each of the 5 lanes
+    // Dividers and swinging front gates for each of the 9 lanes
     const dividerWallGeo = new THREE.BoxGeometry(2.6, 2.1, 0.10);
     const pillarGeo = new THREE.CylinderGeometry(0.08, 0.08, 2.75, 8);
+    const startZ = LANES_Z[0] - halfPitch;
 
     for (let i = 0; i <= NUM_HORSES; i++) {
-      const zDiv = -6.25 + i * 2.5;
+      const zDiv = startZ + i * lanePitch;
       const wall = new THREE.Mesh(dividerWallGeo, frameMat);
       wall.position.set(0, 1.15, zDiv);
       wall.castShadow = true;
@@ -298,19 +304,20 @@ export class RacecourseBuilder {
     }
 
     // Swinging double doors per lane
-    const doorGeo = new THREE.BoxGeometry(0.07, 1.85, 1.10);
+    const doorWidth = halfPitch - 0.08;
+    const doorGeo = new THREE.BoxGeometry(0.07, 1.85, doorWidth);
     LANES_Z.forEach((laneZ) => {
       const leftHinge = new THREE.Group();
-      leftHinge.position.set(1.25, 1.25, laneZ - 1.15);
+      leftHinge.position.set(1.25, 1.25, laneZ - doorWidth);
       const leftDoor = new THREE.Mesh(doorGeo, gateMat);
-      leftDoor.position.set(0, 0, 0.55);
+      leftDoor.position.set(0, 0, doorWidth * 0.5);
       leftHinge.add(leftDoor);
       stallGroup.add(leftHinge);
 
       const rightHinge = new THREE.Group();
-      rightHinge.position.set(1.25, 1.25, laneZ + 1.15);
+      rightHinge.position.set(1.25, 1.25, laneZ + doorWidth);
       const rightDoor = new THREE.Mesh(doorGeo, gateMat);
-      rightDoor.position.set(0, 0, -0.55);
+      rightDoor.position.set(0, 0, -doorWidth * 0.5);
       rightHinge.add(rightDoor);
       stallGroup.add(rightHinge);
 
@@ -367,10 +374,11 @@ export class RacecourseBuilder {
     this.trackGroup.add(gantry);
   }
 
-  _buildFurlongMarkers(startM, finishM, raceFurlongs) {
+  _buildFurlongMarkers(startM, finishM, raceFurlongs, railHalfWidth = 11.65) {
     const poleGeo = new THREE.CylinderGeometry(0.05, 0.05, 1.9, 8);
     const flagGeo = new THREE.PlaneGeometry(0.75, 0.42, 4, 1);
     flagGeo.translate(0.375, 0, 0);
+    const zPole = -(railHalfWidth + 0.25);
 
     for (let f = 1; f < raceFurlongs; f++) {
       const distFromFinishFurlongs = raceFurlongs - f;
@@ -378,7 +386,7 @@ export class RacecourseBuilder {
       if (xPos >= finishM - 4) continue;
 
       const pole = new THREE.Mesh(poleGeo, this.railMaterial);
-      pole.position.set(xPos, 0.95, -7.85);
+      pole.position.set(xPos, 0.95, zPole);
       this.trackGroup.add(pole);
 
       const flagMat = new THREE.MeshStandardMaterial({
@@ -386,7 +394,7 @@ export class RacecourseBuilder {
         side: THREE.DoubleSide
       });
       const flag = new THREE.Mesh(flagGeo, flagMat);
-      flag.position.set(xPos, 1.72, -7.85);
+      flag.position.set(xPos, 1.72, zPole);
       this.trackGroup.add(flag);
       this.furlongFlags.push(flag);
     }
@@ -433,11 +441,11 @@ export class RacecourseBuilder {
     });
   }
 
-  _buildGrandstand(finishM) {
+  _buildGrandstand(finishM, railHalfWidth = 11.65) {
     // Low-poly Royal Turf Club Grandstand lining the North infield side near the finish line
     const standLen = 58;
     const standGroup = new THREE.Group();
-    standGroup.position.set(finishM - standLen * 0.42, 0, -17.5);
+    standGroup.position.set(finishM - standLen * 0.42, 0, -(railHalfWidth + 9.8));
 
     const concreteMat = new THREE.MeshStandardMaterial({ color: "#1d263b", roughness: 0.7 });
     const roofMat = new THREE.MeshStandardMaterial({ color: "#0e4f28", roughness: 0.45, metalness: 0.2 });
@@ -501,7 +509,7 @@ export class RacecourseBuilder {
     this.trackGroup.add(standGroup);
   }
 
-  _buildVegetation(totalCourseLength) {
+  _buildVegetation(totalCourseLength, railHalfWidth = 11.65) {
     // 1. Instanced Perimeter Trees along the infield & backdrop
     const treeCount = Math.min(90, Math.max(36, Math.floor(totalCourseLength / 10)));
     const trunkGeo = new THREE.CylinderGeometry(0.22, 0.34, 2.2, 7);
@@ -518,7 +526,7 @@ export class RacecourseBuilder {
     for (let i = 0; i < treeCount; i++) {
       const side = i % 2 === 0 ? -1 : 1;
       const x = (i / treeCount) * (totalCourseLength + 40) - 10;
-      const z = side * (11.5 + ((i * 7) % 14));
+      const z = side * (railHalfWidth + 4.0 + ((i * 7) % 14));
       // Leave clearing in front of grandstand
       const isGrandstandZone = side < 0 && x > totalCourseLength - 210 && x < totalCourseLength - 135;
       const finalZ = isGrandstandZone ? z - 18 : z;

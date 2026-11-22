@@ -15,7 +15,7 @@ export class RaceAudioEngine {
     this.rainGain = null;
     this.rainSource = null;
 
-    this.hoofTimers = [0, 0, 0, 0, 0];
+    this.hoofTimers = Array(9).fill(0);
     this.lastSpokenText = "";
   }
 

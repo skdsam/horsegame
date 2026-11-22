@@ -554,27 +554,28 @@ function advanceHorse(i, dt, now, order) {
   // 5. Environmental factors
   target = target * speedFactor + windForce * 0.3;
 
-  // 6. Hedges auto-jump trigger
-  if (useHedges) {
-    for (const hx of HEDGES_X) {
-      const d = hx - h.x;
-      const arcOver = (now - jumpStart[i]) > JUMP_DUR;
-      if (d > 0 && d < 120 && arcOver) {
-        if (d < 90) {
-          jumpStart[i] = now;
-          if (scene3d) {
-            scene3d.vfx.emitHedgeTakeoff(h.x * SIM_TO_M, LANES_Z[i]);
-          }
-          audio.playJumpBrush();
-        }
-      }
-    }
-  }
-
   // Smooth momentum change
   m.momentum = lerp(m.momentum, target, 2.0 * dt);
   const maxSpeed = vmaxForDistance() * 1.3;
   const vx = clamp(m.momentum, 50, maxSpeed);
+
+  // 6. Hedges auto-jump trigger (velocity-aware so peak of jump lands squarely over hedge)
+  if (useHedges) {
+    const jumpHalfSpan = vx * (JUMP_DUR * 0.001) * 0.50; // exact distance covered from takeoff to apex
+    const triggerDist = clamp(jumpHalfSpan, 26, 48);      // ~36 sim px (7.2m) before hedge center
+    for (const hx of HEDGES_X) {
+      const d = hx - h.x;
+      const arcOver = (now - jumpStart[i]) > JUMP_DUR;
+      if (d > 2 && d <= triggerDist && arcOver) {
+        jumpStart[i] = now;
+        if (scene3d) {
+          scene3d.vfx.emitHedgeTakeoff(h.x * SIM_TO_M, LANES_Z[i]);
+        }
+        audio.playJumpBrush();
+        break;
+      }
+    }
+  }
 
   h.x += vx * dt;
 
@@ -692,8 +693,9 @@ function showResults() {
   }
 
   bannerGrid.innerHTML = "";
+  const placeLabels = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th"];
   order.forEach((idx, rank) => {
-    const place = ["1st", "2nd", "3rd", "4th", "5th"][rank] || `${rank + 1}th`;
+    const place = placeLabels[rank] || `${rank + 1}th`;
     const left = document.createElement("div");
     left.innerHTML = `<span class="dot" style="background:${horses[idx].color}"></span> <b>${place}</b>`;
     const right = document.createElement("div");
@@ -905,7 +907,7 @@ document.getElementById("btnHedges").onclick = () => {
 };
 document.getElementById("btnContinue").onclick = () => {
   gameState = STATE.PICK;
-  commentary = "Pick a horse (1–5) or click a row on the Tote Board.";
+  commentary = `Pick a horse (1–${NUM_HORSES}) or click a row on the Tote Board.`;
   comEl.textContent = commentary;
 };
 
@@ -1013,7 +1015,7 @@ document.getElementById("btnQuickStart").onclick = () => {
     comEl.textContent = "Players ready. Press Space or Start Race.";
   } else {
     gameState = STATE.PICK;
-    comEl.textContent = "Pick a horse by clicking a row on the Tote Board or pressing 1–5.";
+    comEl.textContent = `Pick a horse by clicking a row on the Tote Board or pressing 1–${NUM_HORSES}.`;
   }
 };
 

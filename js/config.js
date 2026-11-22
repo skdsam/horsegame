@@ -2,35 +2,49 @@
  * Horse Rally 3D — Configuration, Data Pools & Deterministic PRNG
  * ============================================================================ */
 
-export const NUM_HORSES = 5;
+export const NUM_HORSES = 9;
 export const START_X = 70;
 export const FURLONG_CHOICES = [5, 6, 7, 8, 10, 12, 16, 18];
 export const PX_PER_FURLONG = 230;
 export const BASE_FALL_PROB = 0.004;
 
-/* Jump feel (preserved from 2D simulation) */
-export const JUMP_DUR = 900; // ms
-export const JUMP_H = 22;    // sim units (~2.2m in 3D)
+/* Jump feel (tuned so apex of jump aligns squarely over the 3D hedge) */
+export const JUMP_DUR = 660; // ms (~15m total horizontal jump span)
+export const JUMP_H = 22;    // sim units (~1.8m peak elevation in 3D)
 export const PRE_JUMP = 60;
 export const HEAD_START_MS = 140;
 export const LATE_WINDOW = 18;
 
 /* 3D Scale Contract:
  * 1 simulation pixel = 0.2 metres (so 230 px/furlong = 46m compressed 3D furlong)
- * 5 lanes spaced 2.5m apart along Z: -5.0m, -2.5m, 0.0m, +2.5m, +5.0m
+ * 9 lanes spaced 2.2m apart along Z: -8.8m to +8.8m
  */
 export const SIM_TO_M = 0.20;
-export const LANES_Z = [-5.0, -2.5, 0.0, 2.5, 5.0];
-export const LANES_Y_2D = [120, 200, 280, 360, 440]; // legacy compatibility
+export const LANES_Z = [-8.8, -6.6, -4.4, -2.2, 0.0, 2.2, 4.4, 6.6, 8.8];
+export const LANES_Y_2D = [80, 130, 180, 230, 280, 330, 380, 430, 480]; // legacy compatibility
 
-export const COLORS = ["#ff526d", "#61a0ff", "#ffd85a", "#f070ff", "#36c7c7"];
+export const COLORS = [
+  "#ff526d", // 1 Crimson Rose
+  "#61a0ff", // 2 Royal Blue
+  "#ffd85a", // 3 Sovereign Gold
+  "#f070ff", // 4 Orchid Magenta
+  "#36c7c7", // 5 Teal Turquoise
+  "#ff8c42", // 6 Tangerine Blaze
+  "#56f0c1", // 7 Mint Emerald
+  "#a78bfa", // 8 Imperial Violet
+  "#f43f5e"  // 9 Scarlet Ruby
+];
 
 export const EQUINE_COATS = [
   { name: "Bay", body: "#6b381d", mane: "#1c130e", muzzle: "#3d2213", socks: "#f0ece1", hooves: "#1f1b18" },
   { name: "Chestnut", body: "#8c421e", mane: "#59250c", muzzle: "#632d14", socks: "#f5efe6", hooves: "#29221c" },
   { name: "Dapple Grey", body: "#b5bbc4", mane: "#4a5059", muzzle: "#69707a", socks: "#e8ecf2", hooves: "#26282b" },
   { name: "Black Satin", body: "#232328", mane: "#111114", muzzle: "#2e2d33", socks: "#dce0e8", hooves: "#17171a" },
-  { name: "Palomino", body: "#c49446", mane: "#f2ead5", muzzle: "#8c672b", socks: "#faf6eb", hooves: "#332a1e" }
+  { name: "Palomino", body: "#c49446", mane: "#f2ead5", muzzle: "#8c672b", socks: "#faf6eb", hooves: "#332a1e" },
+  { name: "Dark Seal Brown", body: "#3b2316", mane: "#120c09", muzzle: "#29180f", socks: "#e6dfd5", hooves: "#1a1715" },
+  { name: "Red Roan", body: "#7d4538", mane: "#361912", muzzle: "#4a241b", socks: "#f2ece4", hooves: "#261f1d" },
+  { name: "Buckskin", body: "#ab844b", mane: "#1c160e", muzzle: "#45351e", socks: "#241c11", hooves: "#17130c" },
+  { name: "White Cremello", body: "#e8e3d8", mane: "#faf6ed", muzzle: "#bfa89b", socks: "#ffffff", hooves: "#4a4238" }
 ];
 
 export const STATE = {

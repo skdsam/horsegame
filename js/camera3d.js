@@ -114,15 +114,15 @@ export class CameraDirector3D {
       if (this.mode === "orbit" || this.isPointerDown) {
         this._computeOrbitShot(startM + 1.2, 0);
       } else {
-        // Gentle sweeping paddock showcase around the starting stalls
+        // Gentle sweeping paddock showcase around the 9-bay starting stalls
         const angle = Math.sin(nowSec * 0.35) * 0.45 + 0.55;
-        const dist = 13.5;
+        const dist = 17.5;
         this.desiredPos.set(
           startM + Math.cos(angle) * dist,
-          3.8 + Math.sin(nowSec * 0.5) * 0.4,
-          Math.sin(angle) * dist + 4.5
+          4.6 + Math.sin(nowSec * 0.5) * 0.4,
+          Math.sin(angle) * dist + 6.5
         );
-        this.desiredLookAt.set(startM + 1.0, 1.35, focusZ * 0.4);
+        this.desiredLookAt.set(startM + 1.0, 1.35, focusZ * 0.35);
       }
     } else {
       // Racing or Finished camera modes
@@ -130,25 +130,25 @@ export class CameraDirector3D {
 
       // Automatic dramatic finish-line angle in the final 3% unless user is in Chase or Orbit
       if (progress > 0.965 && (this.mode === "broadcast" || this.mode === "action")) {
-        this.desiredPos.set(finishM + 7.5, 2.6, 10.8);
+        this.desiredPos.set(finishM + 8.5, 3.2, 14.5);
         this.desiredLookAt.set(leadX, 1.35, 0);
       } else if (this.mode === "broadcast") {
-        // Elevated rail-side tracking dolly (preserves 2D distance-aware look-ahead feel)
+        // Elevated rail-side tracking dolly framing all 9 lanes
         const distFactor = clamp((raceFurlongs - 5) / (18 - 5), 0, 1);
         const leadAhead = lerp(3.2, 5.8, distFactor);
-        this.desiredPos.set(leadX + leadAhead - 3.5, 5.2, 16.2);
+        this.desiredPos.set(leadX + leadAhead - 4.2, 6.4, 20.5);
         this.desiredLookAt.set(leadX + leadAhead * 0.45, 1.25, -0.5);
       } else if (this.mode === "action") {
         // Low-angle dramatic rail-side sweeping shot
-        this.desiredPos.set(leadX + 3.8, 2.05, 10.6);
+        this.desiredPos.set(leadX + 4.2, 2.35, 14.2);
         this.desiredLookAt.set(leadX - 0.5, 1.35, focusZ * 0.35);
       } else if (this.mode === "chase") {
         // Jockey 3rd-person chase rig behind player's horse (or leader)
         this.desiredPos.set(focusX - 5.4, 2.85, focusZ + 0.65);
         this.desiredLookAt.set(focusX + 8.5, 1.35, focusZ);
       } else if (this.mode === "aerial") {
-        // Helicopter overhead view showing pack formation and hedge lines
-        this.desiredPos.set(leadX - 4.0, 21.0, 11.5);
+        // Helicopter overhead view showing all 9 lanes and hedge lines
+        this.desiredPos.set(leadX - 4.5, 25.0, 14.5);
         this.desiredLookAt.set(leadX + 3.5, 0.5, 0);
       } else {
         // Free Orbit around current leader
