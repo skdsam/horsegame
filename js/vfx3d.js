@@ -103,27 +103,6 @@ export class VFXSystem3D {
   }
 
   /**
-   * Emits golden & team-silk aerodynamic sparks during an AI burst surge (>>>)
-   */
-  emitBurstTrail(worldX, jumpY, laneZ, silkColorHex) {
-    if (this.reducedMotion) return;
-    for (let i = 0; i < 2; i++) {
-      this.spawn({
-        x: worldX - 0.65,
-        y: 1.15 + jumpY + rand(-0.25, 0.35),
-        z: laneZ + rand(-0.28, 0.28),
-        vx: rand(-6.5, -3.2),
-        vy: rand(-0.4, 0.8),
-        vz: rand(-0.6, 0.6),
-        colorHex: i === 0 ? "#ffd76a" : silkColorHex,
-        scale: rand(0.75, 1.3),
-        life: rand(0.25, 0.42),
-        gravity: 0.5
-      });
-    }
-  }
-
-  /**
    * Emits foliage & soil burst when clearing a steeplechase hedge
    */
   emitHedgeTakeoff(worldX, laneZ) {

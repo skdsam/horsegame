@@ -117,9 +117,7 @@ const seedInput = document.getElementById("seedInput");
 const towerListEl = document.getElementById("towerList");
 const raceClockEl = document.getElementById("raceClock");
 const liveSpeedBadgeEl = document.getElementById("liveSpeedBadge");
-const btnCheerBoost = document.getElementById("btnCheerBoost");
 
-let cheerCooldown = 0;
 let lastTowerUpdateMs = 0;
 let nextWeatherEventSec = 75;
 
@@ -191,6 +189,7 @@ function rollRaceTypeAndDistance(randomizeType = true) {
   `;
 
   sync3DCourseAndWeather();
+  if (scene3d) scene3d.bindEnvironmentToSceneMaterials();
   updateModeButtons();
 }
 
@@ -427,13 +426,7 @@ function startRace() {
   gateOpenProgress = 0;
   photoFinishTriggered = false;
   slowMoTimer = 0;
-  cheerCooldown = 0;
   nextWeatherEventSec = rand(55, 95);
-  if (btnCheerBoost) {
-    btnCheerBoost.style.display = "inline-block";
-    btnCheerBoost.disabled = false;
-    btnCheerBoost.textContent = "📣 Cheer Horse! (B)";
-  }
   if (scene3d) {
     scene3d.course.setStartingGatesOpen(0);
     scene3d.course.clearDivots();
@@ -575,18 +568,15 @@ function advanceHorse(i, dt, now, order) {
     if (leadGap > 400) target -= 20;
   }
 
-  // 3. Burst mechanic
+  // 3. Natural pace surge variation (smooth athletic effort, no arcade boost VFX)
   if (m.boostT > 0) {
     m.boostT -= dt;
-    target += 25 * m.aggression;
-    m.fatigue += dt * 2.5;
+    target += 16 * m.aggression;
+    m.fatigue += dt * 1.8;
   } else {
-    const burstChance = (rk > 1) ? 0.015 : 0.005;
+    const burstChance = (rk > 1) ? 0.012 : 0.004;
     if (random() < burstChance && m.fatigue < 4) {
-      m.boostT = rand(1.5, 3.0);
-      commentary = `${h.name} surges into overdrive!`;
-      commentaryTs = now;
-      audio.playBurstSurge();
+      m.boostT = rand(1.8, 3.5);
     }
     if (m.fatigue > 0) m.fatigue -= dt * 0.2;
   }
@@ -661,24 +651,6 @@ function triggerPhotoFlash() {
 }
 
 /* ========================== Live TV Broadcast Leaderboard Tower =========================== */
-function triggerCheerBoost() {
-  if (gameState !== STATE.RACING || cheerCooldown > 0) return;
-  const targetIdx = playerPick != null ? playerPick : (currentLeader >= 0 ? currentLeader : 0);
-  if (fallen[targetIdx] || finishTimes[targetIdx] != null) return;
-
-  const h = horses[targetIdx];
-  const m = model[targetIdx];
-  m.boostT = Math.max(m.boostT, 3.2);
-  m.fatigue = Math.max(0, m.fatigue - 0.8);
-  cheerCooldown = 25.0; // 25s cooldown between cheers
-
-  commentary = `📣 Crowd roars for #${targetIdx + 1} ${h.name} — morale surge activated!`;
-  comEl.textContent = commentary;
-  commentaryTs = performance.now();
-  audio.playBurstSurge();
-  audio.speak(`The crowd roars for ${h.name}!`, false, "high");
-}
-
 function updateLiveBroadcastTower(nowMs, order, elapsedSec) {
   if (nowMs - lastTowerUpdateMs < 200) return;
   lastTowerUpdateMs = nowMs;
@@ -701,17 +673,6 @@ function updateLiveBroadcastTower(nowMs, order, elapsedSec) {
     liveSpeedBadgeEl.textContent = `🏇 Leader: ${mph} MPH • ${progPct}% Complete • Drag to Orbit`;
   }
 
-  if (btnCheerBoost && gameState === STATE.RACING) {
-    if (cheerCooldown > 0) {
-      btnCheerBoost.disabled = true;
-      btnCheerBoost.textContent = `📣 Cheer (${Math.ceil(cheerCooldown)}s)`;
-    } else {
-      btnCheerBoost.disabled = false;
-      const pickNum = (playerPick != null ? playerPick : leadIdx) + 1;
-      btnCheerBoost.textContent = `📣 Cheer #${pickNum}! (B)`;
-    }
-  }
-
   if (!towerListEl) return;
   const leadX = leadHorse?.x || START_X;
   towerListEl.innerHTML = "";
@@ -724,7 +685,7 @@ function updateLiveBroadcastTower(nowMs, order, elapsedSec) {
     const gapLengths = ((leadX - h.x) * SIM_TO_M) / 2.6;
     const gapStr = fallen[hIdx]
       ? "FELL"
-      : (rank === 0 ? (m.boostT > 0 ? ">>>" : "LEAD") : `+${gapLengths.toFixed(1)}L`);
+      : (rank === 0 ? "LEAD" : `+${gapLengths.toFixed(1)}L`);
 
     const energyPct = fallen[hIdx] ? 0 : Math.round(clamp((1 - (m.fatigue / 7.5)) * 100, 12, 100));
 
@@ -735,7 +696,7 @@ function updateLiveBroadcastTower(nowMs, order, elapsedSec) {
       <span style="font-weight:800;color:${rank === 0 ? "var(--brass)" : "var(--muted)"}">${rank + 1}</span>
       <span class="saddle-num" style="width:19px;height:19px;font-size:11px;background:${h.color}">${hIdx + 1}</span>
       <span style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h.name.split(" ")[0]}</span>
-      <span style="font-family:monospace;font-size:11px;font-weight:700;color:${fallen[hIdx] ? "var(--danger)" : (m.boostT > 0 ? "var(--brass)" : "var(--text)")}">${gapStr}</span>
+      <span style="font-family:monospace;font-size:11px;font-weight:700;color:${fallen[hIdx] ? "var(--danger)" : (rank === 0 ? "var(--brass)" : "var(--text)")}">${gapStr}</span>
       <div class="stamina-bar-wrap"><div class="stamina-bar-fill" style="width:${energyPct}%"></div></div>
     `;
     row.onclick = () => chooseHorse(hIdx);
@@ -878,8 +839,6 @@ function tick(now) {
   const leaderIdx = order[0] ?? 0;
 
   if (gameState === STATE.RACING) {
-    if (cheerCooldown > 0) cheerCooldown = Math.max(0, cheerCooldown - rawDt);
-
     // Dynamic mid-race weather front evolution during 5- and 10-minute races
     const elapsedRaceSec = (now - startTime) * 0.001;
     if (elapsedRaceSec > nextWeatherEventSec) {
@@ -987,10 +946,6 @@ function tick(now) {
       const vol = (i === leaderIdx || i === playerPick) ? 0.095 : 0.045;
       audio.playHoofbeat(pan, isWet, vol);
     }
-
-    if (gameState === STATE.RACING && m.boostT > 0 && !fallen[i] && finishTimes[i] == null) {
-      scene3d.vfx.emitBurstTrail(res.worldX, res.jumpY, LANES_Z[i], actor.silkColor);
-    }
   }
 
   // Update Camera Director, Sun Shadow Frustum, Weather & Vegetation Wind
@@ -1089,9 +1044,6 @@ window.addEventListener("keydown", (e) => {
     const open = debugDrawer.style.display === "none";
     debugDrawer.style.display = open ? "flex" : "none";
   }
-  if (e.key === "b" || e.key === "B") {
-    triggerCheerBoost();
-  }
   if ([STATE.PICK, STATE.BOARD, STATE.WAIT, STATE.RACING].includes(gameState)) {
     const n = parseInt(e.key, 10);
     if (n >= 1 && n <= NUM_HORSES) chooseHorse(n - 1);
@@ -1144,12 +1096,6 @@ if (btnCameraMode) {
 if (btnDurationMode) {
   btnDurationMode.onclick = () => {
     toggleRaceDuration();
-  };
-}
-
-if (btnCheerBoost) {
-  btnCheerBoost.onclick = () => {
-    triggerCheerBoost();
   };
 }
 
