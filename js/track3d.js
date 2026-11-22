@@ -157,7 +157,7 @@ export class RacecourseBuilder {
     this.trackGroup.add(trackMesh);
 
     // 2. Surrounding Infield & Paddock Ground Plane
-    const surroundGeo = new THREE.PlaneGeometry(totalCourseLength + 600, 360);
+    const surroundGeo = new THREE.PlaneGeometry(totalCourseLength + 900, 420);
     surroundGeo.rotateX(-Math.PI / 2);
     const surroundMesh = new THREE.Mesh(surroundGeo, this.infieldMaterial);
     surroundMesh.position.set(totalCourseLength * 0.5, -0.03, 0);
@@ -511,7 +511,7 @@ export class RacecourseBuilder {
 
   _buildVegetation(totalCourseLength, railHalfWidth = 11.65) {
     // 1. Instanced Perimeter Trees along the infield & backdrop
-    const treeCount = Math.min(90, Math.max(36, Math.floor(totalCourseLength / 10)));
+    const treeCount = Math.min(180, Math.max(50, Math.floor(totalCourseLength / 10)));
     const trunkGeo = new THREE.CylinderGeometry(0.22, 0.34, 2.2, 7);
     const trunkMat = new THREE.MeshStandardMaterial({ color: "#4a321f", roughness: 0.9 });
     const crownGeo = new THREE.DodecahedronGeometry(1.75, 1);

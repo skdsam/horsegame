@@ -5,11 +5,11 @@
 export const NUM_HORSES = 9;
 export const START_X = 70;
 export const FURLONG_CHOICES = [5, 6, 7, 8, 10, 12, 16, 18];
-export const PX_PER_FURLONG = 230;
-export const BASE_FALL_PROB = 0.004;
+export const PX_PER_FURLONG = 440; // ↑ ~2x longer track distance per furlong so races last longer
+export const BASE_FALL_PROB = 0.0022; // scaled to longer race duration so stumble rate stays balanced
 
 /* Jump feel (tuned so apex of jump aligns squarely over the 3D hedge) */
-export const JUMP_DUR = 660; // ms (~15m total horizontal jump span)
+export const JUMP_DUR = 720; // ms (~15m total horizontal jump span)
 export const JUMP_H = 22;    // sim units (~1.8m peak elevation in 3D)
 export const PRE_JUMP = 60;
 export const HEAD_START_MS = 140;

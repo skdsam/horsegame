@@ -17,6 +17,119 @@ export class RaceAudioEngine {
 
     this.hoofTimers = Array(9).fill(0);
     this.lastSpokenText = "";
+
+    // Windows Natural / Neural & high-quality voice selection state
+    this.availableVoices = [];
+    this.selectedVoice = null;
+    this.selectedVoiceName = "Auto (Best Natural Voice)";
+    this.onVoicesUpdated = null;
+
+    this._initVoiceLoader();
+  }
+
+  _initVoiceLoader() {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    const load = () => {
+      const raw = window.speechSynthesis.getVoices() || [];
+      if (!raw.length) return;
+
+      // Filter and rank English voices, prioritizing Windows 11 Natural/Online Neural voices
+      const enVoices = raw.filter(v => /^en(-|_|$)/i.test(v.lang));
+      const pool = enVoices.length ? enVoices : raw;
+
+      const scoreVoice = (v) => {
+        const name = v.name || "";
+        const lang = v.lang || "";
+        let score = 0;
+
+        // 1. Highest priority: Windows/Edge "Natural" / "Online" Neural voices (sound human, not robotic SAPI5)
+        if (/Natural/i.test(name)) score += 1000;
+        if (/Online/i.test(name)) score += 500;
+        if (/Neural/i.test(name)) score += 500;
+        if (/Google/i.test(name)) score += 300;
+        if (/Premium|Enhanced|Siri/i.test(name)) score += 250;
+
+        // 2. Classic British / Australian / Irish racecourse caller accents (Royal Ascot feel)
+        if (/en-GB/i.test(lang) || /United Kingdom|Great Britain|UK/i.test(name)) score += 180;
+        if (/en-AU|en-IE|en-NZ/i.test(lang)) score += 120;
+        if (/en-US/i.test(lang)) score += 80;
+
+        // 3. Specific well-known expressive announcer voices on Windows 11 / Edge / Chrome
+        if (/Ryan|Guy|Thomas|Oliver|Libby|Sonia|Maisie|Liam|Connor|William|Brian|Andrew|Christopher|Eric/i.test(name)) {
+          score += 95;
+        }
+        if (/George|Hazel|Daniel|Arthur|Malcolm/i.test(name)) {
+          score += 55;
+        }
+
+        // 4. Penalize legacy Windows 98/10 basic SAPI5 desktop voices ("Microsoft David", "Microsoft Zira", "Microsoft Mark")
+        if (/David|Zira|Mark/i.test(name) && !/Natural|Online/i.test(name)) {
+          score -= 250;
+        }
+
+        return score;
+      };
+
+      this.availableVoices = [...pool].sort((a, b) => scoreVoice(b) - scoreVoice(a));
+
+      // Keep user's explicit voice choice if still present, otherwise pick top-ranked voice
+      if (this.selectedVoice) {
+        const match = this.availableVoices.find(v => v.name === this.selectedVoice.name);
+        this.selectedVoice = match || this.availableVoices[0] || null;
+      } else {
+        this.selectedVoice = this.availableVoices[0] || null;
+      }
+
+      if (this.selectedVoice) {
+        this.selectedVoiceName = this.selectedVoice.name;
+      }
+
+      if (typeof this.onVoicesUpdated === "function") {
+        this.onVoicesUpdated(this.availableVoices, this.selectedVoice);
+      }
+    };
+
+    load();
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = load;
+    }
+    // Retry shortly after boot in case browser populates voices asynchronously
+    setTimeout(load, 250);
+    setTimeout(load, 1000);
+  }
+
+  setVoiceByName(voiceName) {
+    if (!this.availableVoices.length) this._initVoiceLoader();
+    const found = this.availableVoices.find(v => v.name === voiceName);
+    if (found) {
+      this.selectedVoice = found;
+      this.selectedVoiceName = found.name;
+      if (this.voiceEnabled) {
+        this.speak(`Race caller switched to ${this.getShortVoiceLabel(found)}.`, true);
+      }
+    }
+    return this.selectedVoice;
+  }
+
+  getShortVoiceLabel(v = this.selectedVoice) {
+    if (!v) return "System Default";
+    const clean = v.name
+      .replace(/^Microsoft\s+/i, "")
+      .replace(/\s+Online\s*\(Natural\)/i, " (Natural)")
+      .replace(/\s*-\s*English.*$/i, "");
+    return `${clean} [${v.lang}]`;
+  }
+
+  _humanizeForRaceCaller(rawText) {
+    // Clean icons & add natural punctuation pauses so neural TTS breathes like a real commentator
+    return String(rawText)
+      .replace(/[👑🏁🌿☀️🌧️💨🏆>>>]/g, "")
+      .replace(/—/g, ", ")
+      .replace(/•/g, ", ")
+      .replace(/#(\d+)/g, "Number $1, ")
+      .replace(/\b(\d+)-(\d+)\b/g, "$1 to $2")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   unlock() {
@@ -108,26 +221,52 @@ export class RaceAudioEngine {
 
   toggleVoice() {
     this.unlock();
+    if (!this.availableVoices.length) this._initVoiceLoader();
     this.voiceEnabled = !this.voiceEnabled;
     if (!this.voiceEnabled && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     } else if (this.voiceEnabled) {
-      this.speak("Live race commentary enabled.");
+      const label = this.getShortVoiceLabel();
+      this.speak(`Live commentary enabled with ${label.replace(/\[.*\]/, "")}.`, true);
     }
     return this.voiceEnabled;
   }
 
-  speak(text, priority = false) {
+  speak(text, priority = false, excitement = "normal") {
     if (!this.voiceEnabled || this.muted || !window.speechSynthesis) return;
     if (text === this.lastSpokenText && !priority) return;
     this.lastSpokenText = text;
     try {
-      if (priority) window.speechSynthesis.cancel();
-      else if (window.speechSynthesis.speaking) return;
-      const u = new SpeechSynthesisUtterance(text);
-      u.rate = 1.16;
-      u.pitch = 1.05;
-      u.volume = 0.85;
+      if (!this.selectedVoice) this._initVoiceLoader();
+      if (priority) {
+        window.speechSynthesis.cancel();
+      } else if (window.speechSynthesis.speaking) {
+        return;
+      }
+
+      const spokenText = this._humanizeForRaceCaller(text);
+      if (!spokenText) return;
+
+      const u = new SpeechSynthesisUtterance(spokenText);
+      if (this.selectedVoice) {
+        u.voice = this.selectedVoice;
+        u.lang = this.selectedVoice.lang;
+      }
+
+      const isNatural = this.selectedVoice && /Natural|Online|Neural|Google/i.test(this.selectedVoice.name);
+
+      // Dynamic prosody: Neural/Natural voices sound best near 1.04-1.12 rate with subtle pitch lift on big moments
+      if (excitement === "high") {
+        u.rate = isNatural ? 1.10 : 1.14;
+        u.pitch = isNatural ? 1.06 : 1.08;
+      } else if (excitement === "calm") {
+        u.rate = isNatural ? 1.00 : 1.04;
+        u.pitch = 1.0;
+      } else {
+        u.rate = isNatural ? 1.05 : 1.08;
+        u.pitch = isNatural ? 1.02 : 1.04;
+      }
+      u.volume = 0.95;
       window.speechSynthesis.speak(u);
     } catch (_) {
       // Ignore speech synthesis errors on restricted platforms

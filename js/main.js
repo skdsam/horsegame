@@ -54,7 +54,7 @@ let HEDGES_X = [];
 let startTime = 0;
 let lastTs = 0;
 let commentaryTs = 0;
-const commentaryInterval = 950;
+const commentaryInterval = 2400; // Paced for longer races & full spoken sentences
 let commentary = "";
 
 let horses = [];
@@ -104,6 +104,8 @@ const btnToggleBoard = document.getElementById("btnToggleBoard");
 const btnCameraMode = document.getElementById("btnCameraMode");
 const btnAudioMute = document.getElementById("btnAudioMute");
 const btnVoiceToggle = document.getElementById("btnVoiceToggle");
+const voiceSelect = document.getElementById("voiceSelect");
+const btnTestVoice = document.getElementById("btnTestVoice");
 const btnDebugDrawer = document.getElementById("btnDebugDrawer");
 const debugDrawer = document.getElementById("debugDrawer");
 const telemetryEl = document.getElementById("telemetryStats");
@@ -199,14 +201,14 @@ function seedHorses(fromCard = null) {
   horses = card.map((c) => ({
     ...c,
     x: START_X,
-    speed: rand(110, 130)
+    speed: rand(96, 114)
   }));
   model.length = 0;
   horses.forEach(() => model.push({
-    pace: rand(104, 124),
-    stamina: rand(0.82, 1.05),
-    aggression: rand(0.6, 1.3),
-    surgeT: rand(6.5, 12.5),
+    pace: rand(92, 110),
+    stamina: rand(0.84, 1.06),
+    aggression: rand(0.65, 1.3),
+    surgeT: rand(8.0, 18.0),
     fatigue: 0,
     momentum: 0,
     boostT: 0
@@ -419,7 +421,7 @@ function startRace() {
   gameState = STATE.COUNTDOWN;
   showCountdown(() => {
     gameState = STATE.RACING;
-    audio.speak("And they are off!", true);
+    audio.speak("Gates crash open! And they're off in the feature race!", true, "high");
   });
 }
 
@@ -455,13 +457,13 @@ const pickRunner = () => pick(horses).name;
 
 function randomComment() {
   const acts = [
-    () => `${leadName()} holds the call — tempo honest.`,
-    () => `${pickRunner()} sneaks to the rail for cover.`,
-    () => `${pickRunner()} edges wider looking for daylight.`,
-    () => `Wind gust across the turf — silks rippling!`,
-    () => `${pickRunner()} travelling sweetly on the bit.`,
-    () => `${pickRunner()} asked to pick up; response is there.`,
-    () => `Pack compresses — swings and roundabouts!`
+    () => `${leadName()} holds the call, setting an honest tempo up front.`,
+    () => `${pickRunner()} sneaks to the inside rail looking for cover.`,
+    () => `${pickRunner()} angles out wider searching for clear daylight!`,
+    () => `A gust sweeps across the turf, jockey silks rippling in the wind!`,
+    () => `${pickRunner()} is travelling sweetly on the bit.`,
+    () => `${pickRunner()} is asked for an effort, and the response is immediate!`,
+    () => `The pack compresses tightly — anyone's race from here!`
   ];
   return pick(acts)();
 }
@@ -470,14 +472,22 @@ function milestoneCalls() {
   const lead = Math.max(...horses.map(h => h.x));
   const prog = (lead - START_X) / RACE_DISTANCE;
   let milestone = null;
-  if (prog > 0.25 && prog < 0.27) milestone = `Quarter gone — ${leadName()} shows the way.`;
-  else if (prog > 0.50 && prog < 0.52) milestone = `Halfway home — field well bunched.`;
-  else if (prog > 0.75 && prog < 0.77) milestone = `Three-quarters — moves coming from the pack!`;
-  else if (prog > 0.90 && prog < 0.92) milestone = `Final furlong! ${leadName()} asked for everything!`;
+  let excitement = "normal";
+  if (prog > 0.25 && prog < 0.27) {
+    milestone = `A quarter of the way gone, and ${leadName()} shows the way.`;
+  } else if (prog > 0.50 && prog < 0.52) {
+    milestone = `Halfway home now, with ${leadName()} leading a tightly bunched field.`;
+  } else if (prog > 0.75 && prog < 0.77) {
+    milestone = `Three-quarters gone! Challengers are fanning out across the track!`;
+    excitement = "high";
+  } else if (prog > 0.89 && prog < 0.92) {
+    milestone = `Final furlong! ${leadName()} is driving hard for the line!`;
+    excitement = "high";
+  }
 
   if (milestone && commentary !== milestone) {
     commentary = milestone;
-    audio.speak(milestone);
+    audio.speak(milestone, true, excitement);
   }
 }
 
@@ -490,7 +500,7 @@ function rankOf(i, order) {
 }
 function vmaxForDistance() {
   const t = clamp((raceFurlongs - 5) / (18 - 5), 0, 1);
-  return Math.round(lerp(160, 95, t));
+  return Math.round(lerp(132, 84, t));
 }
 
 /* ========================== Simulation Dynamics =========================== */
@@ -689,7 +699,7 @@ function showResults() {
 
   bannerTitle.textContent = first != null ? `🏆 Winner: ${horses[first].name}` : "No horse finished!";
   if (first != null) {
-    audio.speak(`Winner is ${horses[first].name}!`, true);
+    audio.speak(`At the wire, it's ${horses[first].name} taking the victory!`, true, "high");
   }
 
   bannerGrid.innerHTML = "";
@@ -744,10 +754,14 @@ function tick(now) {
     scene3d.course.setStartingGatesOpen(gateOpenProgress);
 
     if (leaderIdx !== currentLeader) {
+      const hadLeader = currentLeader !== -1;
       currentLeader = leaderIdx;
       leaderSince = now;
       commentary = `${horses[leaderIdx].name} takes the lead!`;
       commentaryTs = now;
+      if (hadLeader) {
+        audio.speak(`${horses[leaderIdx].name} surges to the front!`, false, "high");
+      }
     }
 
     let fallMsg = false;
@@ -758,13 +772,14 @@ function tick(now) {
         fallMsg = true;
         commentary = `Oh no! ${horses[i].name} stumbled!`;
         commentaryTs = now;
-        audio.speak(`${horses[i].name} stumbled!`);
+        audio.speak(`Drama on the course! ${horses[i].name} has stumbled!`, true, "high");
       }
     }
 
     if (now - commentaryTs > commentaryInterval && !fallMsg) {
       commentary = randomComment();
       commentaryTs = now;
+      audio.speak(commentary, false, "normal");
     }
     milestoneCalls();
     comEl.textContent = commentary;
@@ -949,6 +964,64 @@ if (btnVoiceToggle) {
   btnVoiceToggle.onclick = () => {
     const voice = audio.toggleVoice();
     btnVoiceToggle.textContent = voice ? "🎙️ Caller: ON" : "🎙️ Caller: OFF";
+    if (btnVoiceToggle. title) {
+      btnVoiceToggle.title = `Voice: ${audio.getShortVoiceLabel()} (Hotkey: V)`;
+    }
+  };
+}
+
+// Populate Windows Natural / Neural Voice Selector dropdown
+function populateVoiceDropdown(voices, selected) {
+  if (!voiceSelect) return;
+  voiceSelect.innerHTML = "";
+  if (!voices || !voices.length) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "System Default Voice";
+    voiceSelect.appendChild(opt);
+    return;
+  }
+  voices.forEach(v => {
+    const opt = document.createElement("option");
+    opt.value = v.name;
+    const isNatural = /Natural|Online|Neural|Google/i.test(v.name);
+    opt.textContent = (isNatural ? "★ " : "") + audio.getShortVoiceLabel(v);
+    if (selected && v.name === selected.name) {
+      opt.selected = true;
+    }
+    voiceSelect.appendChild(opt);
+  });
+  if (btnVoiceToggle && selected) {
+    btnVoiceToggle.title = `Active Voice: ${audio.getShortVoiceLabel(selected)} (Hotkey: V)`;
+  }
+}
+
+audio.onVoicesUpdated = populateVoiceDropdown;
+populateVoiceDropdown(audio.availableVoices, audio.selectedVoice);
+
+if (voiceSelect) {
+  voiceSelect.onchange = (e) => {
+    audio.unlock();
+    if (!audio.voiceEnabled) {
+      audio.voiceEnabled = true;
+      if (btnVoiceToggle) btnVoiceToggle.textContent = "🎙️ Caller: ON";
+    }
+    audio.setVoiceByName(e.target.value);
+    if (btnVoiceToggle && audio.selectedVoice) {
+      btnVoiceToggle.title = `Active Voice: ${audio.getShortVoiceLabel(audio.selectedVoice)} (Hotkey: V)`;
+    }
+  };
+}
+
+if (btnTestVoice) {
+  btnTestVoice.onclick = () => {
+    audio.unlock();
+    if (!audio.voiceEnabled) {
+      audio.voiceEnabled = true;
+      if (btnVoiceToggle) btnVoiceToggle.textContent = "🎙️ Caller: ON";
+    }
+    const sampleHorse = horses[0]?.name || "Lightning Menzies";
+    audio.speak(`Welcome to the Royal Turf Club! ${sampleHorse} is looking sharp in the paddock today.`, true, "high");
   };
 }
 

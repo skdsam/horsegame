@@ -558,6 +558,8 @@
       <button class="btn ghost" id="btnCameraMode" title="Cycle 3D Camera Angle (Hotkey: C)">🎥 Cam: TV Broadcast</button>
       <button class="btn ghost" id="btnAudioMute" title="Toggle Web Audio SFX (Hotkey: M)">🔊 Audio</button>
       <button class="btn ghost" id="btnVoiceToggle" title="Toggle Live Speech Announcer (Hotkey: V)">🎙️ Caller: OFF</button>
+      <select class="btn ghost" id="voiceSelect" title="Choose Windows Natural / Neural Commentator Voice" style="max-width:195px;padding:7px 10px;text-overflow:ellipsis"></select>
+      <button class="btn ghost" id="btnTestVoice" title="Preview selected commentator voice" style="padding:7px 10px">▶</button>
       <button class="btn ghost" id="btnDebugDrawer" title="3D Visual Validation & Quality Settings (Hotkey: D)">⚙️ 3D View</button>
       <button class="btn ghost" id="btnRestartFull" title="Full reset to paddock setup">Reset to Setup</button>
       <button class="btn warn" id="btnInstantReplay" title="Restart same card with same horses">Instant Replay</button>
@@ -718,11 +720,11 @@ import * as THREE from "three";
 const NUM_HORSES = 9;
 const START_X = 70;
 const FURLONG_CHOICES = [5, 6, 7, 8, 10, 12, 16, 18];
-const PX_PER_FURLONG = 230;
-const BASE_FALL_PROB = 0.004;
+const PX_PER_FURLONG = 440; // ↑ ~2x longer track distance per furlong so races last longer
+const BASE_FALL_PROB = 0.0022; // scaled to longer race duration so stumble rate stays balanced
 
 /* Jump feel (tuned so apex of jump aligns squarely over the 3D hedge) */
-const JUMP_DUR = 660; // ms (~15m total horizontal jump span)
+const JUMP_DUR = 720; // ms (~15m total horizontal jump span)
 const JUMP_H = 22;    // sim units (~1.8m peak elevation in 3D)
 const PRE_JUMP = 60;
 const HEAD_START_MS = 140;
@@ -881,6 +883,119 @@ class RaceAudioEngine {
 
     this.hoofTimers = Array(9).fill(0);
     this.lastSpokenText = "";
+
+    // Windows Natural / Neural & high-quality voice selection state
+    this.availableVoices = [];
+    this.selectedVoice = null;
+    this.selectedVoiceName = "Auto (Best Natural Voice)";
+    this.onVoicesUpdated = null;
+
+    this._initVoiceLoader();
+  }
+
+  _initVoiceLoader() {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    const load = () => {
+      const raw = window.speechSynthesis.getVoices() || [];
+      if (!raw.length) return;
+
+      // Filter and rank English voices, prioritizing Windows 11 Natural/Online Neural voices
+      const enVoices = raw.filter(v => /^en(-|_|$)/i.test(v.lang));
+      const pool = enVoices.length ? enVoices : raw;
+
+      const scoreVoice = (v) => {
+        const name = v.name || "";
+        const lang = v.lang || "";
+        let score = 0;
+
+        // 1. Highest priority: Windows/Edge "Natural" / "Online" Neural voices (sound human, not robotic SAPI5)
+        if (/Natural/i.test(name)) score += 1000;
+        if (/Online/i.test(name)) score += 500;
+        if (/Neural/i.test(name)) score += 500;
+        if (/Google/i.test(name)) score += 300;
+        if (/Premium|Enhanced|Siri/i.test(name)) score += 250;
+
+        // 2. Classic British / Australian / Irish racecourse caller accents (Royal Ascot feel)
+        if (/en-GB/i.test(lang) || /United Kingdom|Great Britain|UK/i.test(name)) score += 180;
+        if (/en-AU|en-IE|en-NZ/i.test(lang)) score += 120;
+        if (/en-US/i.test(lang)) score += 80;
+
+        // 3. Specific well-known expressive announcer voices on Windows 11 / Edge / Chrome
+        if (/Ryan|Guy|Thomas|Oliver|Libby|Sonia|Maisie|Liam|Connor|William|Brian|Andrew|Christopher|Eric/i.test(name)) {
+          score += 95;
+        }
+        if (/George|Hazel|Daniel|Arthur|Malcolm/i.test(name)) {
+          score += 55;
+        }
+
+        // 4. Penalize legacy Windows 98/10 basic SAPI5 desktop voices ("Microsoft David", "Microsoft Zira", "Microsoft Mark")
+        if (/David|Zira|Mark/i.test(name) && !/Natural|Online/i.test(name)) {
+          score -= 250;
+        }
+
+        return score;
+      };
+
+      this.availableVoices = [...pool].sort((a, b) => scoreVoice(b) - scoreVoice(a));
+
+      // Keep user's explicit voice choice if still present, otherwise pick top-ranked voice
+      if (this.selectedVoice) {
+        const match = this.availableVoices.find(v => v.name === this.selectedVoice.name);
+        this.selectedVoice = match || this.availableVoices[0] || null;
+      } else {
+        this.selectedVoice = this.availableVoices[0] || null;
+      }
+
+      if (this.selectedVoice) {
+        this.selectedVoiceName = this.selectedVoice.name;
+      }
+
+      if (typeof this.onVoicesUpdated === "function") {
+        this.onVoicesUpdated(this.availableVoices, this.selectedVoice);
+      }
+    };
+
+    load();
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = load;
+    }
+    // Retry shortly after boot in case browser populates voices asynchronously
+    setTimeout(load, 250);
+    setTimeout(load, 1000);
+  }
+
+  setVoiceByName(voiceName) {
+    if (!this.availableVoices.length) this._initVoiceLoader();
+    const found = this.availableVoices.find(v => v.name === voiceName);
+    if (found) {
+      this.selectedVoice = found;
+      this.selectedVoiceName = found.name;
+      if (this.voiceEnabled) {
+        this.speak(`Race caller switched to ${this.getShortVoiceLabel(found)}.`, true);
+      }
+    }
+    return this.selectedVoice;
+  }
+
+  getShortVoiceLabel(v = this.selectedVoice) {
+    if (!v) return "System Default";
+    const clean = v.name
+      .replace(/^Microsoft\s+/i, "")
+      .replace(/\s+Online\s*\(Natural\)/i, " (Natural)")
+      .replace(/\s*-\s*English.*$/i, "");
+    return `${clean} [${v.lang}]`;
+  }
+
+  _humanizeForRaceCaller(rawText) {
+    // Clean icons & add natural punctuation pauses so neural TTS breathes like a real commentator
+    return String(rawText)
+      .replace(/[👑🏁🌿☀️🌧️💨🏆>>>]/g, "")
+      .replace(/—/g, ", ")
+      .replace(/•/g, ", ")
+      .replace(/#(\d+)/g, "Number $1, ")
+      .replace(/\b(\d+)-(\d+)\b/g, "$1 to $2")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   unlock() {
@@ -972,26 +1087,52 @@ class RaceAudioEngine {
 
   toggleVoice() {
     this.unlock();
+    if (!this.availableVoices.length) this._initVoiceLoader();
     this.voiceEnabled = !this.voiceEnabled;
     if (!this.voiceEnabled && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     } else if (this.voiceEnabled) {
-      this.speak("Live race commentary enabled.");
+      const label = this.getShortVoiceLabel();
+      this.speak(`Live commentary enabled with ${label.replace(/\[.*\]/, "")}.`, true);
     }
     return this.voiceEnabled;
   }
 
-  speak(text, priority = false) {
+  speak(text, priority = false, excitement = "normal") {
     if (!this.voiceEnabled || this.muted || !window.speechSynthesis) return;
     if (text === this.lastSpokenText && !priority) return;
     this.lastSpokenText = text;
     try {
-      if (priority) window.speechSynthesis.cancel();
-      else if (window.speechSynthesis.speaking) return;
-      const u = new SpeechSynthesisUtterance(text);
-      u.rate = 1.16;
-      u.pitch = 1.05;
-      u.volume = 0.85;
+      if (!this.selectedVoice) this._initVoiceLoader();
+      if (priority) {
+        window.speechSynthesis.cancel();
+      } else if (window.speechSynthesis.speaking) {
+        return;
+      }
+
+      const spokenText = this._humanizeForRaceCaller(text);
+      if (!spokenText) return;
+
+      const u = new SpeechSynthesisUtterance(spokenText);
+      if (this.selectedVoice) {
+        u.voice = this.selectedVoice;
+        u.lang = this.selectedVoice.lang;
+      }
+
+      const isNatural = this.selectedVoice && /Natural|Online|Neural|Google/i.test(this.selectedVoice.name);
+
+      // Dynamic prosody: Neural/Natural voices sound best near 1.04-1.12 rate with subtle pitch lift on big moments
+      if (excitement === "high") {
+        u.rate = isNatural ? 1.10 : 1.14;
+        u.pitch = isNatural ? 1.06 : 1.08;
+      } else if (excitement === "calm") {
+        u.rate = isNatural ? 1.00 : 1.04;
+        u.pitch = 1.0;
+      } else {
+        u.rate = isNatural ? 1.05 : 1.08;
+        u.pitch = isNatural ? 1.02 : 1.04;
+      }
+      u.volume = 0.95;
       window.speechSynthesis.speak(u);
     } catch (_) {
       // Ignore speech synthesis errors on restricted platforms
@@ -1903,7 +2044,7 @@ class RacecourseBuilder {
     this.trackGroup.add(trackMesh);
 
     // 2. Surrounding Infield & Paddock Ground Plane
-    const surroundGeo = new THREE.PlaneGeometry(totalCourseLength + 600, 360);
+    const surroundGeo = new THREE.PlaneGeometry(totalCourseLength + 900, 420);
     surroundGeo.rotateX(-Math.PI / 2);
     const surroundMesh = new THREE.Mesh(surroundGeo, this.infieldMaterial);
     surroundMesh.position.set(totalCourseLength * 0.5, -0.03, 0);
@@ -2257,7 +2398,7 @@ class RacecourseBuilder {
 
   _buildVegetation(totalCourseLength, railHalfWidth = 11.65) {
     // 1. Instanced Perimeter Trees along the infield & backdrop
-    const treeCount = Math.min(90, Math.max(36, Math.floor(totalCourseLength / 10)));
+    const treeCount = Math.min(180, Math.max(50, Math.floor(totalCourseLength / 10)));
     const trunkGeo = new THREE.CylinderGeometry(0.22, 0.34, 2.2, 7);
     const trunkMat = new THREE.MeshStandardMaterial({ color: "#4a321f", roughness: 0.9 });
     const crownGeo = new THREE.DodecahedronGeometry(1.75, 1);
@@ -3145,7 +3286,7 @@ let HEDGES_X = [];
 let startTime = 0;
 let lastTs = 0;
 let commentaryTs = 0;
-const commentaryInterval = 950;
+const commentaryInterval = 2400; // Paced for longer races & full spoken sentences
 let commentary = "";
 
 let horses = [];
@@ -3195,6 +3336,8 @@ const btnToggleBoard = document.getElementById("btnToggleBoard");
 const btnCameraMode = document.getElementById("btnCameraMode");
 const btnAudioMute = document.getElementById("btnAudioMute");
 const btnVoiceToggle = document.getElementById("btnVoiceToggle");
+const voiceSelect = document.getElementById("voiceSelect");
+const btnTestVoice = document.getElementById("btnTestVoice");
 const btnDebugDrawer = document.getElementById("btnDebugDrawer");
 const debugDrawer = document.getElementById("debugDrawer");
 const telemetryEl = document.getElementById("telemetryStats");
@@ -3290,14 +3433,14 @@ function seedHorses(fromCard = null) {
   horses = card.map((c) => ({
     ...c,
     x: START_X,
-    speed: rand(110, 130)
+    speed: rand(96, 114)
   }));
   model.length = 0;
   horses.forEach(() => model.push({
-    pace: rand(104, 124),
-    stamina: rand(0.82, 1.05),
-    aggression: rand(0.6, 1.3),
-    surgeT: rand(6.5, 12.5),
+    pace: rand(92, 110),
+    stamina: rand(0.84, 1.06),
+    aggression: rand(0.65, 1.3),
+    surgeT: rand(8.0, 18.0),
     fatigue: 0,
     momentum: 0,
     boostT: 0
@@ -3510,7 +3653,7 @@ function startRace() {
   gameState = STATE.COUNTDOWN;
   showCountdown(() => {
     gameState = STATE.RACING;
-    audio.speak("And they are off!", true);
+    audio.speak("Gates crash open! And they're off in the feature race!", true, "high");
   });
 }
 
@@ -3546,13 +3689,13 @@ const pickRunner = () => pick(horses).name;
 
 function randomComment() {
   const acts = [
-    () => `${leadName()} holds the call — tempo honest.`,
-    () => `${pickRunner()} sneaks to the rail for cover.`,
-    () => `${pickRunner()} edges wider looking for daylight.`,
-    () => `Wind gust across the turf — silks rippling!`,
-    () => `${pickRunner()} travelling sweetly on the bit.`,
-    () => `${pickRunner()} asked to pick up; response is there.`,
-    () => `Pack compresses — swings and roundabouts!`
+    () => `${leadName()} holds the call, setting an honest tempo up front.`,
+    () => `${pickRunner()} sneaks to the inside rail looking for cover.`,
+    () => `${pickRunner()} angles out wider searching for clear daylight!`,
+    () => `A gust sweeps across the turf, jockey silks rippling in the wind!`,
+    () => `${pickRunner()} is travelling sweetly on the bit.`,
+    () => `${pickRunner()} is asked for an effort, and the response is immediate!`,
+    () => `The pack compresses tightly — anyone's race from here!`
   ];
   return pick(acts)();
 }
@@ -3561,14 +3704,22 @@ function milestoneCalls() {
   const lead = Math.max(...horses.map(h => h.x));
   const prog = (lead - START_X) / RACE_DISTANCE;
   let milestone = null;
-  if (prog > 0.25 && prog < 0.27) milestone = `Quarter gone — ${leadName()} shows the way.`;
-  else if (prog > 0.50 && prog < 0.52) milestone = `Halfway home — field well bunched.`;
-  else if (prog > 0.75 && prog < 0.77) milestone = `Three-quarters — moves coming from the pack!`;
-  else if (prog > 0.90 && prog < 0.92) milestone = `Final furlong! ${leadName()} asked for everything!`;
+  let excitement = "normal";
+  if (prog > 0.25 && prog < 0.27) {
+    milestone = `A quarter of the way gone, and ${leadName()} shows the way.`;
+  } else if (prog > 0.50 && prog < 0.52) {
+    milestone = `Halfway home now, with ${leadName()} leading a tightly bunched field.`;
+  } else if (prog > 0.75 && prog < 0.77) {
+    milestone = `Three-quarters gone! Challengers are fanning out across the track!`;
+    excitement = "high";
+  } else if (prog > 0.89 && prog < 0.92) {
+    milestone = `Final furlong! ${leadName()} is driving hard for the line!`;
+    excitement = "high";
+  }
 
   if (milestone && commentary !== milestone) {
     commentary = milestone;
-    audio.speak(milestone);
+    audio.speak(milestone, true, excitement);
   }
 }
 
@@ -3581,7 +3732,7 @@ function rankOf(i, order) {
 }
 function vmaxForDistance() {
   const t = clamp((raceFurlongs - 5) / (18 - 5), 0, 1);
-  return Math.round(lerp(160, 95, t));
+  return Math.round(lerp(132, 84, t));
 }
 
 /* ========================== Simulation Dynamics =========================== */
@@ -3780,7 +3931,7 @@ function showResults() {
 
   bannerTitle.textContent = first != null ? `🏆 Winner: ${horses[first].name}` : "No horse finished!";
   if (first != null) {
-    audio.speak(`Winner is ${horses[first].name}!`, true);
+    audio.speak(`At the wire, it's ${horses[first].name} taking the victory!`, true, "high");
   }
 
   bannerGrid.innerHTML = "";
@@ -3835,10 +3986,14 @@ function tick(now) {
     scene3d.course.setStartingGatesOpen(gateOpenProgress);
 
     if (leaderIdx !== currentLeader) {
+      const hadLeader = currentLeader !== -1;
       currentLeader = leaderIdx;
       leaderSince = now;
       commentary = `${horses[leaderIdx].name} takes the lead!`;
       commentaryTs = now;
+      if (hadLeader) {
+        audio.speak(`${horses[leaderIdx].name} surges to the front!`, false, "high");
+      }
     }
 
     let fallMsg = false;
@@ -3849,13 +4004,14 @@ function tick(now) {
         fallMsg = true;
         commentary = `Oh no! ${horses[i].name} stumbled!`;
         commentaryTs = now;
-        audio.speak(`${horses[i].name} stumbled!`);
+        audio.speak(`Drama on the course! ${horses[i].name} has stumbled!`, true, "high");
       }
     }
 
     if (now - commentaryTs > commentaryInterval && !fallMsg) {
       commentary = randomComment();
       commentaryTs = now;
+      audio.speak(commentary, false, "normal");
     }
     milestoneCalls();
     comEl.textContent = commentary;
@@ -4040,6 +4196,64 @@ if (btnVoiceToggle) {
   btnVoiceToggle.onclick = () => {
     const voice = audio.toggleVoice();
     btnVoiceToggle.textContent = voice ? "🎙️ Caller: ON" : "🎙️ Caller: OFF";
+    if (btnVoiceToggle. title) {
+      btnVoiceToggle.title = `Voice: ${audio.getShortVoiceLabel()} (Hotkey: V)`;
+    }
+  };
+}
+
+// Populate Windows Natural / Neural Voice Selector dropdown
+function populateVoiceDropdown(voices, selected) {
+  if (!voiceSelect) return;
+  voiceSelect.innerHTML = "";
+  if (!voices || !voices.length) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "System Default Voice";
+    voiceSelect.appendChild(opt);
+    return;
+  }
+  voices.forEach(v => {
+    const opt = document.createElement("option");
+    opt.value = v.name;
+    const isNatural = /Natural|Online|Neural|Google/i.test(v.name);
+    opt.textContent = (isNatural ? "★ " : "") + audio.getShortVoiceLabel(v);
+    if (selected && v.name === selected.name) {
+      opt.selected = true;
+    }
+    voiceSelect.appendChild(opt);
+  });
+  if (btnVoiceToggle && selected) {
+    btnVoiceToggle.title = `Active Voice: ${audio.getShortVoiceLabel(selected)} (Hotkey: V)`;
+  }
+}
+
+audio.onVoicesUpdated = populateVoiceDropdown;
+populateVoiceDropdown(audio.availableVoices, audio.selectedVoice);
+
+if (voiceSelect) {
+  voiceSelect.onchange = (e) => {
+    audio.unlock();
+    if (!audio.voiceEnabled) {
+      audio.voiceEnabled = true;
+      if (btnVoiceToggle) btnVoiceToggle.textContent = "🎙️ Caller: ON";
+    }
+    audio.setVoiceByName(e.target.value);
+    if (btnVoiceToggle && audio.selectedVoice) {
+      btnVoiceToggle.title = `Active Voice: ${audio.getShortVoiceLabel(audio.selectedVoice)} (Hotkey: V)`;
+    }
+  };
+}
+
+if (btnTestVoice) {
+  btnTestVoice.onclick = () => {
+    audio.unlock();
+    if (!audio.voiceEnabled) {
+      audio.voiceEnabled = true;
+      if (btnVoiceToggle) btnVoiceToggle.textContent = "🎙️ Caller: ON";
+    }
+    const sampleHorse = horses[0]?.name || "Lightning Menzies";
+    audio.speak(`Welcome to the Royal Turf Club! ${sampleHorse} is looking sharp in the paddock today.`, true, "high");
   };
 }
 
