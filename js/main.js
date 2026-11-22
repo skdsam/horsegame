@@ -114,6 +114,14 @@ const btnDebugDrawer = document.getElementById("btnDebugDrawer");
 const debugDrawer = document.getElementById("debugDrawer");
 const telemetryEl = document.getElementById("telemetryStats");
 const seedInput = document.getElementById("seedInput");
+const towerListEl = document.getElementById("towerList");
+const raceClockEl = document.getElementById("raceClock");
+const liveSpeedBadgeEl = document.getElementById("liveSpeedBadge");
+const btnCheerBoost = document.getElementById("btnCheerBoost");
+
+let cheerCooldown = 0;
+let lastTowerUpdateMs = 0;
+let nextWeatherEventSec = 75;
 
 /* ============================ Course & Card Setup ============================= */
 function computeDistanceForDuration() {
@@ -419,8 +427,16 @@ function startRace() {
   gateOpenProgress = 0;
   photoFinishTriggered = false;
   slowMoTimer = 0;
+  cheerCooldown = 0;
+  nextWeatherEventSec = rand(55, 95);
+  if (btnCheerBoost) {
+    btnCheerBoost.style.display = "inline-block";
+    btnCheerBoost.disabled = false;
+    btnCheerBoost.textContent = "📣 Cheer Horse! (B)";
+  }
   if (scene3d) {
     scene3d.course.setStartingGatesOpen(0);
+    scene3d.course.clearDivots();
     scene3d.vfx.clearAll();
   }
 
@@ -593,8 +609,8 @@ function advanceHorse(i, dt, now, order) {
 
   // 6. Hedges auto-jump trigger (velocity-aware so peak of jump lands squarely over hedge)
   if (useHedges) {
-    const jumpHalfSpan = vx * (JUMP_DUR * 0.001) * 0.50; // exact distance covered from takeoff to apex
-    const triggerDist = clamp(jumpHalfSpan, 26, 48);      // ~36 sim px (7.2m) before hedge center
+    const jumpHalfSpan = vx * (JUMP_DUR * 0.001) * 0.50;
+    const triggerDist = clamp(jumpHalfSpan, 26, 48);
     for (const hx of HEDGES_X) {
       const d = hx - h.x;
       const arcOver = (now - jumpStart[i]) > JUMP_DUR;
@@ -602,6 +618,14 @@ function advanceHorse(i, dt, now, order) {
         jumpStart[i] = now;
         if (scene3d) {
           scene3d.vfx.emitHedgeTakeoff(h.x * SIM_TO_M, LANES_Z[i]);
+          // If this hedge is a Water Jump, schedule a 3D water pit splash on landing!
+          if (scene3d.course.waterJumpSimXSet.has(hx)) {
+            setTimeout(() => {
+              if (scene3d && !fallen[i]) {
+                scene3d.vfx.emitWaterJumpSplash(hx * SIM_TO_M, LANES_Z[i]);
+              }
+            }, Math.round(JUMP_DUR * 0.78));
+          }
         }
         audio.playJumpBrush();
         break;
@@ -633,6 +657,89 @@ function triggerPhotoFlash() {
   requestAnimationFrame(() => {
     flashEl.style.transition = "opacity 650ms ease";
     flashEl.style.opacity = 0;
+  });
+}
+
+/* ========================== Live TV Broadcast Leaderboard Tower =========================== */
+function triggerCheerBoost() {
+  if (gameState !== STATE.RACING || cheerCooldown > 0) return;
+  const targetIdx = playerPick != null ? playerPick : (currentLeader >= 0 ? currentLeader : 0);
+  if (fallen[targetIdx] || finishTimes[targetIdx] != null) return;
+
+  const h = horses[targetIdx];
+  const m = model[targetIdx];
+  m.boostT = Math.max(m.boostT, 3.2);
+  m.fatigue = Math.max(0, m.fatigue - 0.8);
+  cheerCooldown = 25.0; // 25s cooldown between cheers
+
+  commentary = `📣 Crowd roars for #${targetIdx + 1} ${h.name} — morale surge activated!`;
+  comEl.textContent = commentary;
+  commentaryTs = performance.now();
+  audio.playBurstSurge();
+  audio.speak(`The crowd roars for ${h.name}!`, false, "high");
+}
+
+function updateLiveBroadcastTower(nowMs, order, elapsedSec) {
+  if (nowMs - lastTowerUpdateMs < 200) return;
+  lastTowerUpdateMs = nowMs;
+
+  const totalSec = targetRaceMinutes * 60;
+  const eMins = Math.floor(elapsedSec / 60);
+  const eSecs = Math.floor(elapsedSec % 60);
+  const tMins = Math.floor(totalSec / 60);
+  if (raceClockEl) {
+    raceClockEl.textContent = `${String(eMins).padStart(2, "0")}:${String(eSecs).padStart(2, "0")} / ${String(tMins).padStart(2, "0")}:00`;
+  }
+
+  const leadIdx = order[0] ?? 0;
+  const leadHorse = horses[leadIdx];
+  const leadModel = model[leadIdx];
+  if (liveSpeedBadgeEl && leadHorse && leadModel) {
+    const rawVx = gameState === STATE.RACING ? (leadModel.momentum || 105) : 0;
+    const mph = gameState === STATE.RACING ? (31.5 + (rawVx - 95) * 0.16).toFixed(1) : "0.0";
+    const progPct = Math.round(clamp(((leadHorse.x - START_X) / Math.max(1, RACE_DISTANCE)) * 100, 0, 100));
+    liveSpeedBadgeEl.textContent = `🏇 Leader: ${mph} MPH • ${progPct}% Complete • Drag to Orbit`;
+  }
+
+  if (btnCheerBoost && gameState === STATE.RACING) {
+    if (cheerCooldown > 0) {
+      btnCheerBoost.disabled = true;
+      btnCheerBoost.textContent = `📣 Cheer (${Math.ceil(cheerCooldown)}s)`;
+    } else {
+      btnCheerBoost.disabled = false;
+      const pickNum = (playerPick != null ? playerPick : leadIdx) + 1;
+      btnCheerBoost.textContent = `📣 Cheer #${pickNum}! (B)`;
+    }
+  }
+
+  if (!towerListEl) return;
+  const leadX = leadHorse?.x || START_X;
+  towerListEl.innerHTML = "";
+
+  order.forEach((hIdx, rank) => {
+    const h = horses[hIdx];
+    const m = model[hIdx];
+    if (!h || !m) return;
+
+    const gapLengths = ((leadX - h.x) * SIM_TO_M) / 2.6;
+    const gapStr = fallen[hIdx]
+      ? "FELL"
+      : (rank === 0 ? (m.boostT > 0 ? ">>>" : "LEAD") : `+${gapLengths.toFixed(1)}L`);
+
+    const energyPct = fallen[hIdx] ? 0 : Math.round(clamp((1 - (m.fatigue / 7.5)) * 100, 12, 100));
+
+    const row = document.createElement("div");
+    row.className = `tower-row${rank === 0 ? " is-leader" : ""}${playerPick === hIdx ? " is-picked" : ""}`;
+    row.title = `Click to focus camera on #${hIdx + 1} ${h.name}`;
+    row.innerHTML = `
+      <span style="font-weight:800;color:${rank === 0 ? "var(--brass)" : "var(--muted)"}">${rank + 1}</span>
+      <span class="saddle-num" style="width:19px;height:19px;font-size:11px;background:${h.color}">${hIdx + 1}</span>
+      <span style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h.name.split(" ")[0]}</span>
+      <span style="font-family:monospace;font-size:11px;font-weight:700;color:${fallen[hIdx] ? "var(--danger)" : (m.boostT > 0 ? "var(--brass)" : "var(--text)")}">${gapStr}</span>
+      <div class="stamina-bar-wrap"><div class="stamina-bar-fill" style="width:${energyPct}%"></div></div>
+    `;
+    row.onclick = () => chooseHorse(hIdx);
+    towerListEl.appendChild(row);
   });
 }
 
@@ -771,6 +878,36 @@ function tick(now) {
   const leaderIdx = order[0] ?? 0;
 
   if (gameState === STATE.RACING) {
+    if (cheerCooldown > 0) cheerCooldown = Math.max(0, cheerCooldown - rawDt);
+
+    // Dynamic mid-race weather front evolution during 5- and 10-minute races
+    const elapsedRaceSec = (now - startTime) * 0.001;
+    if (elapsedRaceSec > nextWeatherEventSec) {
+      nextWeatherEventSec += rand(70, 120);
+      const prevWeather = weather;
+      const wChoices = ["Clear", "Rain", "Wind", "Rain & Wind"].filter(x => x !== prevWeather);
+      weather = pick(wChoices);
+      const baseFall = (BASE_FALL_PROB * 300) / (targetRaceMinutes * 60);
+      if (weather === "Clear") { fallProb = baseFall; speedFactor = 1; windForce = 0; }
+      if (weather === "Rain") { fallProb = baseFall * 1.5; speedFactor = 0.94; windForce = 0; }
+      if (weather === "Wind") { fallProb = baseFall; speedFactor = 1; windForce = rand(-5, 5); }
+      if (weather === "Rain & Wind") { fallProb = baseFall * 1.5; speedFactor = 0.90; windForce = rand(-5, 5); }
+
+      const icon = WEATHER_ICONS[weather] ?? "";
+      weatherChip.textContent = `Weather: ${icon} ${weather}`;
+      weatherTop.textContent = `Weather: ${icon} ${weather}`;
+      scene3d.weatherSystem.applyWeatherEnvelope(weather, windForce, {
+        sunLight: scene3d.sunLight,
+        hemiLight: scene3d.hemiLight,
+        fog: scene3d.fog,
+        renderer: scene3d.renderer
+      });
+      commentary = `${icon} Weather shift on the course — conditions turning to ${weather}!`;
+      comEl.textContent = commentary;
+      commentaryTs = now;
+      audio.speak(`Weather shift on the course! Conditions are turning to ${weather}.`, false, "high");
+    }
+
     // Open starting stall gates rapidly in first 0.25s
     gateOpenProgress = clamp(gateOpenProgress + rawDt * 6.5, 0, 1);
     scene3d.course.setStartingGatesOpen(gateOpenProgress);
@@ -844,6 +981,7 @@ function tick(now) {
 
     if (res.hoofStrike && finishTimes[i] == null) {
       scene3d.vfx.emitHoofClods(res.worldX, LANES_Z[i], isWet);
+      scene3d.course.addHoofDivot(res.worldX, LANES_Z[i]);
       // Spatial pan relative to camera X
       const pan = clamp((res.worldX - scene3d.camera.position.x) * 0.08, -0.8, 0.8);
       const vol = (i === leaderIdx || i === playerPick) ? 0.095 : 0.045;
@@ -872,8 +1010,18 @@ function tick(now) {
   });
   updateCameraButtonLabel();
 
-  scene3d.updateSunFollow(leadWorldX);
-  scene3d.course.updateVegetationWind(nowSec, windForce);
+  scene3d.updateSunFollow(leadWorldX, raceProgress, weather);
+  scene3d.course.updateVegetationWind(nowSec, windForce, scene3d.cameraDirector.currentLookAt.x, raceProgress);
+  const elapsedSec = gameState === STATE.RACING ? (now - startTime) * 0.001 : 0;
+  scene3d.course.updateJumbotronScreen(now, {
+    horses,
+    order,
+    elapsedSec,
+    totalSec: targetRaceMinutes * 60,
+    weather,
+    raceFurlongs
+  });
+  updateLiveBroadcastTower(now, order, elapsedSec);
   scene3d.weatherSystem.update(rawDt, scene3d.cameraDirector.currentLookAt.x, weather, windForce);
   scene3d.vfx.update(simDt);
   audio.updateAmbience(gameState === STATE.RACING, raceProgress, weather);
@@ -941,6 +1089,9 @@ window.addEventListener("keydown", (e) => {
     const open = debugDrawer.style.display === "none";
     debugDrawer.style.display = open ? "flex" : "none";
   }
+  if (e.key === "b" || e.key === "B") {
+    triggerCheerBoost();
+  }
   if ([STATE.PICK, STATE.BOARD, STATE.WAIT, STATE.RACING].includes(gameState)) {
     const n = parseInt(e.key, 10);
     if (n >= 1 && n <= NUM_HORSES) chooseHorse(n - 1);
@@ -993,6 +1144,12 @@ if (btnCameraMode) {
 if (btnDurationMode) {
   btnDurationMode.onclick = () => {
     toggleRaceDuration();
+  };
+}
+
+if (btnCheerBoost) {
+  btnCheerBoost.onclick = () => {
+    triggerCheerBoost();
   };
 }
 

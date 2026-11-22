@@ -4,12 +4,53 @@
  * ============================================================================ */
 
 import * as THREE from "three";
-import { COLORS, NUM_HORSES, SIM_TO_M } from "./config.js";
+import { COLORS, NUM_HORSES, SIM_TO_M, clamp, lerp } from "./config.js";
 import { createHorseActor } from "./horse3d.js";
 import { RacecourseBuilder } from "./track3d.js";
 import { WeatherSystem3D } from "./weather3d.js";
 import { VFXSystem3D } from "./vfx3d.js";
 import { CameraDirector3D } from "./camera3d.js";
+
+/**
+ * Generates a procedural equirectangular gradient sky dome texture
+ * transitioning from bright Royal Turf afternoon to warm Golden-Hour sunset
+ */
+function createSkyDomeShaderMaterial() {
+  return new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    depthWrite: false,
+    uniforms: {
+      topColor: { value: new THREE.Color("#29589e") },
+      horizonColor: { value: new THREE.Color("#8ec5ff") },
+      sunColor: { value: new THREE.Color("#ffe596") },
+      sunDir: { value: new THREE.Vector3(0.55, 0.45, 0.4).normalize() }
+    },
+    vertexShader: `
+      varying vec3 vWorldPos;
+      void main() {
+        vec4 wp = modelMatrix * vec4(position, 1.0);
+        vWorldPos = wp.xyz;
+        gl_Position = projectionMatrix * viewMatrix * wp;
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 topColor;
+      uniform vec3 horizonColor;
+      uniform vec3 sunColor;
+      uniform vec3 sunDir;
+      varying vec3 vWorldPos;
+      void main() {
+        vec3 d = normalize(vWorldPos - cameraPosition);
+        float h = clamp(d.y * 1.35, 0.0, 1.0);
+        vec3 col = mix(horizonColor, topColor, pow(h, 0.65));
+        float sunAmt = max(dot(d, normalize(sunDir)), 0.0);
+        col += sunColor * pow(sunAmt, 14.0) * 0.45;
+        col += sunColor * smoothstep(0.996, 0.9995, sunAmt) * 0.9;
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `
+  });
+}
 
 export class SceneManager3D {
   constructor(canvas, minimapCanvas) {
@@ -20,7 +61,7 @@ export class SceneManager3D {
     this.qualityTier = "high"; // "high" | "balanced" | "reduced"
     this.debugMode = "off";    // "off" | "wireframe" | "weather"
 
-    // 1. WebGLRenderer setup with ACESFilmicToneMapping (no-post baseline that reads cleanly)
+    // 1. WebGLRenderer setup with ACESFilmicToneMapping
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
       antialias: true,
@@ -28,15 +69,19 @@ export class SceneManager3D {
     });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.08;
+    this.renderer.toneMappingExposure = 1.1;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.setClearColor("#6b9cf2");
 
-    // 2. Scene & Atmospheric Fog
+    // 2. Scene, Physical Sky Dome & Atmospheric Fog
     this.scene = new THREE.Scene();
-    this.fog = new THREE.Fog("#6b9cf2", 95, 460);
+    this.fog = new THREE.Fog("#6b9cf2", 110, 520);
     this.scene.fog = this.fog;
+
+    this.skyMat = createSkyDomeShaderMaterial();
+    this.skyDome = new THREE.Mesh(new THREE.SphereGeometry(580, 24, 16), this.skyMat);
+    this.scene.add(this.skyDome);
 
     // 3. Perspective Camera
     this.camera = new THREE.PerspectiveCamera(44, 16 / 9, 0.4, 700);
@@ -132,11 +177,34 @@ export class SceneManager3D {
     });
   }
 
-  updateSunFollow(focusWorldX) {
-    // Keep shadow frustum centered on the racing pack so shadows stay crisp across 18 furlongs
-    this.sunLight.position.set(focusWorldX + 24, 36, 24);
+  updateSunFollow(focusWorldX, raceProgress = 0, weatherName = "Clear") {
+    // Keep sky dome centered on camera so horizon never clips across multi-kilometre courses
+    this.skyDome.position.copy(this.camera.position);
+
+    // Dynamic Time-of-Day progression: sun descends gently into Golden Hour as race progresses (0 -> 1)
+    const sunElev = lerp(38, 17, clamp(raceProgress, 0, 1));
+    this.sunLight.position.set(focusWorldX + 28, sunElev, 24);
     this.sunLight.target.position.set(focusWorldX, 0, 0);
     this.sunLight.target.updateMatrixWorld();
+
+    // Update sky dome colors based on weather and golden-hour progress
+    const isRain = weatherName.includes("Rain");
+    if (isRain) {
+      this.skyMat.uniforms.topColor.value.set("#1f2b3d");
+      this.skyMat.uniforms.horizonColor.value.set("#435875");
+      this.skyMat.uniforms.sunColor.value.set("#8aa0bd");
+    } else {
+      const topDay = new THREE.Color("#22559c");
+      const topDusk = new THREE.Color("#1b2956");
+      const horDay = new THREE.Color("#8ac2ff");
+      const horDusk = new THREE.Color("#f59e56");
+      const g = clamp(raceProgress * 1.15, 0, 1);
+      this.skyMat.uniforms.topColor.value.lerpColors(topDay, topDusk, g);
+      this.skyMat.uniforms.horizonColor.value.lerpColors(horDay, horDusk, g);
+      this.skyMat.uniforms.sunColor.value.set("#ffd27d");
+      this.sunLight.color.lerpColors(new THREE.Color("#fff5de"), new THREE.Color("#ffbe6b"), g);
+      this.fog.color.lerpColors(new THREE.Color("#73a8f5"), new THREE.Color("#c98a63"), g * 0.75);
+    }
   }
 
   renderFrame(dt) {

@@ -145,6 +145,27 @@ export class VFXSystem3D {
   }
 
   /**
+   * Emits a dramatic 3D cyan/white water plume when a horse clears a Steeplechase Water Jump
+   */
+  emitWaterJumpSplash(worldX, laneZ) {
+    if (this.reducedMotion) return;
+    for (let i = 0; i < 18; i++) {
+      this.spawn({
+        x: worldX + 1.6 + rand(-0.4, 0.5),
+        y: 0.18 + rand(0, 0.35),
+        z: laneZ + rand(-0.55, 0.55),
+        vx: rand(-2.2, 3.8),
+        vy: rand(3.2, 6.8),
+        vz: rand(-2.4, 2.4),
+        colorHex: i % 3 === 0 ? "#ffffff" : (i % 2 === 0 ? "#8ce0ff" : "#38bdf8"),
+        scale: rand(0.95, 1.65),
+        life: rand(0.45, 0.85),
+        gravity: 11.0
+      });
+    }
+  }
+
+  /**
    * Emits dramatic crimson/amber warning burst when a horse stumbles
    */
   emitStumbleBurst(worldX, laneZ) {

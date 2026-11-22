@@ -1,13 +1,107 @@
 /* ============================================================================
  * Horse Rally 3D — Articulated 3D Horse & Jockey Procedural Assembly + Animator
- * Skills: threejs-procedural-geometry, threejs-procedural-animation
+ * Skills: threejs-procedural-geometry, threejs-procedural-animation, 3d-cloth-material
  * ============================================================================ */
 
 import * as THREE from "three";
 import { EQUINE_COATS, JUMP_DUR, JUMP_H, LANES_Z, SIM_TO_M, clamp, lerp } from "./config.js";
 
+const SILK_SECONDARIES = [
+  "#ffffff", // 1 White chevrons
+  "#ffd76a", // 2 Gold hoops
+  "#10182b", // 3 Navy diamonds
+  "#56f0c1", // 4 Mint stars
+  "#ffffff", // 5 White quarters
+  "#141824", // 6 Obsidian stripes
+  "#132247", // 7 Royal sash
+  "#ffd76a", // 8 Gold crossbelts
+  "#ffffff"  // 9 White polka spots
+];
+
 /**
- * Creates a canvas-backed texture for numbered saddlecloths & overhead badges
+ * Generates patterned woven silk cloth texture (stripes, hoops, diamonds, chevrons, quarters, sash)
+ */
+function makePatternedSilkTexture(index, primaryHex) {
+  const c = document.createElement("canvas");
+  c.width = 256;
+  c.height = 256;
+  const ctx = c.getContext("2d");
+
+  const secondaryHex = SILK_SECONDARIES[index % SILK_SECONDARIES.length];
+  ctx.fillStyle = primaryHex;
+  ctx.fillRect(0, 0, 256, 256);
+
+  ctx.fillStyle = secondaryHex;
+  ctx.strokeStyle = secondaryHex;
+  const patternType = index % 6;
+
+  if (patternType === 0) {
+    // Bold vertical racing stripes
+    for (let x = 16; x < 256; x += 48) {
+      ctx.fillRect(x, 0, 20, 256);
+    }
+  } else if (patternType === 1) {
+    // Horizontal hoops
+    for (let y = 18; y < 256; y += 52) {
+      ctx.fillRect(0, y, 256, 22);
+    }
+  } else if (patternType === 2) {
+    // Harlequin diamonds
+    const s = 48;
+    for (let y = 0; y < 256; y += s) {
+      for (let x = 0; x < 256; x += s) {
+        if (((x / s) + (y / s)) % 2 === 0) {
+          ctx.beginPath();
+          ctx.moveTo(x + s * 0.5, y);
+          ctx.lineTo(x + s, y + s * 0.5);
+          ctx.lineTo(x + s * 0.5, y + s);
+          ctx.lineTo(x, y + s * 0.5);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+    }
+  } else if (patternType === 3) {
+    // Royal Quarters
+    ctx.fillRect(0, 0, 128, 128);
+    ctx.fillRect(128, 128, 128, 128);
+  } else if (patternType === 4) {
+    // Diagonal Sash + Chevrons
+    ctx.lineWidth = 34;
+    ctx.beginPath();
+    ctx.moveTo(-20, 20);
+    ctx.lineTo(276, 236);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-20, 130);
+    ctx.lineTo(276, 346);
+    ctx.stroke();
+  } else {
+    // Polka Dots / Discs
+    for (let y = 28; y < 256; y += 56) {
+      for (let x = 28; x < 256; x += 56) {
+        ctx.beginPath();
+        ctx.arc(x, y, 15, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  // Subtle cloth weave sheen lines
+  ctx.fillStyle = "rgba(255,255,255,0.06)";
+  for (let y = 0; y < 256; y += 4) {
+    ctx.fillRect(0, y, 256, 1);
+  }
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/**
+ * Creates a canvas-backed texture for numbered saddlecloths
  */
 function makeSaddleNumberTexture(number, silkColor) {
   const c = document.createElement("canvas");
@@ -22,8 +116,13 @@ function makeSaddleNumberTexture(number, silkColor) {
   ctx.lineWidth = 14;
   ctx.strokeRect(7, 7, 114, 114);
 
+  // Gold inner trim
+  ctx.strokeStyle = "#d4af37";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(16, 16, 96, 96);
+
   ctx.fillStyle = "#0e1324";
-  ctx.font = "900 72px Inter, system-ui, sans-serif";
+  ctx.font = "900 70px Inter, system-ui, sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(String(number), 64, 68);
@@ -118,8 +217,8 @@ export function createHorseActor(index, silkColorHex) {
   // Shared PBR Materials
   const coatMat = new THREE.MeshStandardMaterial({
     color: coat.body,
-    roughness: 0.52,
-    metalness: 0.05
+    roughness: 0.48,
+    metalness: 0.06
   });
   const maneMat = new THREE.MeshStandardMaterial({
     color: coat.mane,
@@ -128,28 +227,43 @@ export function createHorseActor(index, silkColorHex) {
   });
   const muzzleMat = new THREE.MeshStandardMaterial({
     color: coat.muzzle,
-    roughness: 0.45
+    roughness: 0.42
   });
   const sockMat = new THREE.MeshStandardMaterial({
     color: coat.socks,
-    roughness: 0.6
+    roughness: 0.58
+  });
+  const wrapMat = new THREE.MeshStandardMaterial({
+    color: silkColorHex,
+    roughness: 0.5
   });
   const hoofMat = new THREE.MeshStandardMaterial({
     color: coat.hooves,
-    roughness: 0.35,
-    metalness: 0.15
+    roughness: 0.30,
+    metalness: 0.2
   });
   const leatherMat = new THREE.MeshStandardMaterial({
     color: "#2b180c",
-    roughness: 0.42,
-    metalness: 0.12
+    roughness: 0.38,
+    metalness: 0.15
   });
+  const metalIronMat = new THREE.MeshStandardMaterial({
+    color: "#d4dce8",
+    roughness: 0.22,
+    metalness: 0.85
+  });
+  const patternedSilkTex = makePatternedSilkTexture(index, silkColorHex);
   const silkMat = new THREE.MeshStandardMaterial({
+    map: patternedSilkTex,
+    roughness: 0.34,
+    metalness: 0.10,
+    emissive: silkColorHex,
+    emissiveIntensity: 0.06
+  });
+  const solidSilkMat = new THREE.MeshStandardMaterial({
     color: silkColorHex,
     roughness: 0.32,
-    metalness: 0.12,
-    emissive: silkColorHex,
-    emissiveIntensity: 0.08
+    metalness: 0.12
   });
   const breechesMat = new THREE.MeshStandardMaterial({
     color: "#f2f4f8",
@@ -161,11 +275,11 @@ export function createHorseActor(index, silkColorHex) {
   });
   const saddleClothMat = new THREE.MeshStandardMaterial({
     map: makeSaddleNumberTexture(index + 1, silkColorHex),
-    roughness: 0.5
+    roughness: 0.48
   });
 
   // 1. Torso Barrel (oriented along X)
-  const torsoGeo = new THREE.CapsuleGeometry(0.36, 0.92, 8, 16);
+  const torsoGeo = new THREE.CapsuleGeometry(0.36, 0.92, 10, 18);
   torsoGeo.rotateZ(Math.PI / 2);
   const torso = new THREE.Mesh(torsoGeo, coatMat);
   torso.castShadow = true;
@@ -173,36 +287,54 @@ export function createHorseActor(index, silkColorHex) {
   bodyPivot.add(torso);
 
   // Chest & Hindquarters muscular volume spheres
-  const chestGeo = new THREE.SphereGeometry(0.39, 14, 12);
-  chestGeo.scale(1.15, 1.05, 0.96);
+  const chestGeo = new THREE.SphereGeometry(0.39, 16, 14);
+  chestGeo.scale(1.16, 1.06, 0.96);
   const chest = new THREE.Mesh(chestGeo, coatMat);
   chest.position.set(0.45, 0.03, 0);
   chest.castShadow = true;
   bodyPivot.add(chest);
 
-  const croupGeo = new THREE.SphereGeometry(0.38, 14, 12);
-  croupGeo.scale(1.12, 1.05, 0.95);
+  const croupGeo = new THREE.SphereGeometry(0.38, 16, 14);
+  croupGeo.scale(1.14, 1.06, 0.96);
   const croup = new THREE.Mesh(croupGeo, coatMat);
   croup.position.set(-0.48, 0.06, 0);
   croup.castShadow = true;
   bodyPivot.add(croup);
 
-  // Numbered Saddlecloth & Leather Saddle
+  // Numbered Saddlecloth, Girth Strap & Leather Saddle
   const clothGeo = new THREE.BoxGeometry(0.68, 0.48, 0.78);
   const saddleCloth = new THREE.Mesh(clothGeo, saddleClothMat);
   saddleCloth.position.set(0.02, 0.19, 0);
   saddleCloth.castShadow = true;
   bodyPivot.add(saddleCloth);
 
+  const girthGeo = new THREE.CylinderGeometry(0.37, 0.37, 0.10, 16);
+  girthGeo.rotateZ(Math.PI / 2);
+  const girth = new THREE.Mesh(girthGeo, leatherMat);
+  girth.position.set(0.18, 0.0, 0);
+  bodyPivot.add(girth);
+
   const saddleGeo = new THREE.BoxGeometry(0.50, 0.14, 0.52);
   const saddle = new THREE.Mesh(saddleGeo, leatherMat);
   saddle.position.set(0.0, 0.36, 0);
   bodyPivot.add(saddle);
 
-  // 2. Articulated Neck, Head, Mane & Bridle
+  // Stirrup leathers & metallic stirrup irons
+  [-0.36, 0.36].forEach(zSide => {
+    const strap = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.38, 0.015), leatherMat);
+    strap.position.set(0.06, 0.14, zSide);
+    bodyPivot.add(strap);
+
+    const iron = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.01, 6, 12), metalIronMat);
+    iron.position.set(0.06, -0.05, zSide);
+    iron.rotation.y = Math.PI / 2;
+    bodyPivot.add(iron);
+  });
+
+  // 2. Articulated Neck, Head, Braided Mane & Bridle
   const neckPivot = new THREE.Group();
   neckPivot.position.set(0.62, 0.22, 0);
-  neckPivot.rotation.z = -0.58; // Angled forward and up
+  neckPivot.rotation.z = -0.58;
   bodyPivot.add(neckPivot);
 
   const neckGeo = new THREE.CylinderGeometry(0.15, 0.27, 0.86, 12);
@@ -211,7 +343,7 @@ export function createHorseActor(index, silkColorHex) {
   neckMesh.castShadow = true;
   neckPivot.add(neckMesh);
 
-  // Mane crest along back of neck
+  // Mane crest + braided tufts along back of neck
   const maneGeo = new THREE.BoxGeometry(0.12, 0.80, 0.08);
   const maneMesh = new THREE.Mesh(maneGeo, maneMat);
   maneMesh.position.set(-0.14, 0.40, 0);
@@ -236,6 +368,15 @@ export function createHorseActor(index, silkColorHex) {
   snout.castShadow = true;
   headPivot.add(snout);
 
+  // Expressive Eyes & Nostrils
+  const eyeGeo = new THREE.SphereGeometry(0.028, 8, 8);
+  const eyeMat = new THREE.MeshStandardMaterial({ color: "#120d0a", roughness: 0.15 });
+  [-0.135, 0.135].forEach(zSide => {
+    const eye = new THREE.Mesh(eyeGeo, eyeMat);
+    eye.position.set(0.20, 0.06, zSide);
+    headPivot.add(eye);
+  });
+
   // Blaze stripe on forehead
   const blazeGeo = new THREE.BoxGeometry(0.32, 0.04, 0.08);
   const blaze = new THREE.Mesh(blazeGeo, sockMat);
@@ -243,11 +384,30 @@ export function createHorseActor(index, silkColorHex) {
   blaze.rotation.z = -0.22;
   headPivot.add(blaze);
 
-  // Silk Blinkers / Hood on horse head
+  // Silk Blinkers / Racing Hood & Bridle Noseband + Bit Rings
   const hoodGeo = new THREE.BoxGeometry(0.26, 0.28, 0.28);
-  const hood = new THREE.Mesh(hoodGeo, silkMat);
+  const hood = new THREE.Mesh(hoodGeo, solidSilkMat);
   hood.position.set(0.08, 0.01, 0);
   headPivot.add(hood);
+
+  // White blinkers cups beside eyes
+  const cupGeo = new THREE.CylinderGeometry(0.055, 0.055, 0.03, 10);
+  cupGeo.rotateX(Math.PI / 2);
+  [-0.145, 0.145].forEach(zSide => {
+    const cup = new THREE.Mesh(cupGeo, breechesMat);
+    cup.position.set(0.18, 0.06, zSide);
+    headPivot.add(cup);
+
+    // Metallic bit ring at corner of mouth
+    const bitRing = new THREE.Mesh(new THREE.TorusGeometry(0.032, 0.008, 6, 10), metalIronMat);
+    bitRing.position.set(0.46, -0.07, zSide * 0.78);
+    headPivot.add(bitRing);
+  });
+
+  // Leather noseband
+  const noseband = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.23, 0.24), leatherMat);
+  noseband.position.set(0.36, -0.02, 0);
+  headPivot.add(noseband);
 
   // Ears
   const earGeo = new THREE.ConeGeometry(0.045, 0.16, 6);
@@ -258,20 +418,30 @@ export function createHorseActor(index, silkColorHex) {
     headPivot.add(ear);
   });
 
+  // 3D Leather Reins connecting Bridle Bit back to Jockey's Hands
+  const reinGeo = new THREE.CylinderGeometry(0.011, 0.011, 0.92, 6);
+  reinGeo.rotateZ(Math.PI / 2);
+  [-0.14, 0.14].forEach(zSide => {
+    const rein = new THREE.Mesh(reinGeo, leatherMat);
+    rein.position.set(0.55, 0.66, zSide);
+    rein.rotation.z = 0.22;
+    bodyPivot.add(rein);
+  });
+
   // 3. Articulated Tail
   const tailPivot = new THREE.Group();
   tailPivot.position.set(-0.84, 0.18, 0);
   tailPivot.rotation.z = -0.65;
   bodyPivot.add(tailPivot);
 
-  const tailGeo = new THREE.ConeGeometry(0.13, 0.85, 8);
-  tailGeo.rotateZ(Math.PI); // tip pointing down/back
+  const tailGeo = new THREE.ConeGeometry(0.13, 0.88, 10);
+  tailGeo.rotateZ(Math.PI);
   const tailMesh = new THREE.Mesh(tailGeo, maneMat);
   tailMesh.position.set(-0.12, -0.36, 0);
   tailMesh.castShadow = true;
   tailPivot.add(tailMesh);
 
-  // 4. Four Articulated Two-Segment Legs (FL, FR, BL, BR)
+  // 4. Four Articulated Two-Segment Legs (FL, FR, BL, BR) with Racing Bandage Wraps
   const legs = [];
   const legConfigs = [
     { name: "FL", x: 0.56, z: -0.20, phase: 0.0 },
@@ -282,6 +452,7 @@ export function createHorseActor(index, silkColorHex) {
 
   const upperLegGeo = new THREE.CylinderGeometry(0.095, 0.072, 0.56, 8);
   const lowerLegGeo = new THREE.CylinderGeometry(0.068, 0.052, 0.54, 8);
+  const wrapGeo = new THREE.CylinderGeometry(0.072, 0.060, 0.28, 8);
   const hoofGeo = new THREE.CylinderGeometry(0.065, 0.082, 0.11, 8);
 
   legConfigs.forEach(cfg => {
@@ -303,6 +474,11 @@ export function createHorseActor(index, silkColorHex) {
     lowerMesh.castShadow = true;
     knee.add(lowerMesh);
 
+    // Team-colored cannon-bone racing wrap bandage
+    const legWrap = new THREE.Mesh(wrapGeo, wrapMat);
+    legWrap.position.set(0, -0.22, 0);
+    knee.add(legWrap);
+
     const hoofMesh = new THREE.Mesh(hoofGeo, hoofMat);
     hoofMesh.position.set(0.02, -0.52, 0);
     knee.add(hoofMesh);
@@ -316,12 +492,11 @@ export function createHorseActor(index, silkColorHex) {
     });
   });
 
-  // 5. Jockey Assembly crouched in racing stance
+  // 5. Jockey Assembly crouched in racing stance with Patterned Silks, Goggles & Riding Crop
   const jockeyPivot = new THREE.Group();
   jockeyPivot.position.set(0.06, 0.44, 0);
   bodyPivot.add(jockeyPivot);
 
-  // Jockey torso leaning forward
   const jTorsoPivot = new THREE.Group();
   jTorsoPivot.rotation.z = -0.78;
   jockeyPivot.add(jTorsoPivot);
@@ -332,7 +507,7 @@ export function createHorseActor(index, silkColorHex) {
   jTorso.castShadow = true;
   jTorsoPivot.add(jTorso);
 
-  // Jockey head & silk helmet
+  // Jockey head, silk helmet & racing goggles
   const jHeadGroup = new THREE.Group();
   jHeadGroup.position.set(0.06, 0.56, 0);
   jHeadGroup.rotation.z = 0.65;
@@ -341,25 +516,35 @@ export function createHorseActor(index, silkColorHex) {
   const jFace = new THREE.Mesh(new THREE.SphereGeometry(0.115, 10, 10), skinMat);
   jHeadGroup.add(jFace);
 
-  const helmetGeo = new THREE.SphereGeometry(0.13, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.65);
+  const helmetGeo = new THREE.SphereGeometry(0.132, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.65);
   const helmet = new THREE.Mesh(helmetGeo, silkMat);
   helmet.position.set(-0.01, 0.02, 0);
   helmet.castShadow = true;
   jHeadGroup.add(helmet);
 
+  // Jockey Goggles
+  const goggles = new THREE.Mesh(
+    new THREE.BoxGeometry(0.06, 0.045, 0.19),
+    new THREE.MeshStandardMaterial({ color: "#111622", metalness: 0.7, roughness: 0.2 })
+  );
+  goggles.position.set(0.095, 0.01, 0);
+  jHeadGroup.add(goggles);
+
   // Helmet visor peak
   const visor = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.025, 0.16), leatherMat);
-  visor.position.set(0.11, 0.03, 0);
+  visor.position.set(0.11, 0.04, 0);
   jHeadGroup.add(visor);
 
-  // Jockey arms reaching toward reins
+  // Jockey arms reaching toward reins + animated whip/crop in right hand
   const armGeo = new THREE.CapsuleGeometry(0.048, 0.34, 4, 8);
   armGeo.rotateZ(Math.PI / 2);
-  [-0.17, 0.17].forEach(zOff => {
+  let rightArmMesh = null;
+  [-0.17, 0.17].forEach((zOff, idx) => {
     const arm = new THREE.Mesh(armGeo, silkMat);
     arm.position.set(0.22, 0.34, zOff);
     arm.rotation.z = -0.25;
     jTorsoPivot.add(arm);
+    if (idx === 1) rightArmMesh = arm;
 
     // Thighs & boots in stirrups
     const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.065, 0.24, 4, 8), breechesMat);
@@ -372,6 +557,15 @@ export function createHorseActor(index, silkColorHex) {
     boot.rotation.z = -0.35;
     jockeyPivot.add(boot);
   });
+
+  // Riding crop / whip attached to jockey's right hand
+  const cropPivot = new THREE.Group();
+  cropPivot.position.set(0.36, 0.32, 0.20);
+  jTorsoPivot.add(cropPivot);
+  const cropStick = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.012, 0.52, 6), leatherMat);
+  cropStick.position.set(-0.20, 0.10, 0.06);
+  cropStick.rotation.z = 1.15;
+  cropPivot.add(cropStick);
 
   // 6. 3D Golden Leader Crown (visible when currentLeader === index)
   const crownGroup = new THREE.Group();
@@ -412,6 +606,8 @@ export function createHorseActor(index, silkColorHex) {
     tailPivot,
     jockeyPivot,
     jTorsoPivot,
+    rightArmMesh,
+    cropPivot,
     crownGroup,
     labelSprite,
     labelData,
@@ -429,41 +625,32 @@ export function createHorseActor(index, silkColorHex) {
 export function updateHorseActorAnimation(actor, horseState, modelState, simContext, dt, nowMs) {
   const { isRacing, isJumpActive, jumpT, isFallen, isLeader, windForce } = simContext;
 
-  // Convert simulation X coordinate into 3D metres
   const worldX = horseState.x * SIM_TO_M;
   actor.root.position.x = worldX;
   actor.root.position.z = LANES_Z[actor.index];
 
-  // Speed ratio (typical sim speed is 80..210 px/s)
   const speedPx = isRacing && !isFallen ? clamp(modelState.momentum || horseState.speed || 115, 0, 230) : 0;
   const speedNorm = clamp(speedPx / 135, 0, 1.85);
 
-  // Advance gait cycle phase proportional to real elapsed time and speed
   if (isRacing && !isFallen) {
     actor.gaitPhase += dt * (7.5 + speedNorm * 8.2);
   } else if (!isFallen) {
-    // Idle breathing / pawing phase
     actor.gaitPhase += dt * 1.8;
   }
 
   const p = actor.gaitPhase;
 
-  // Jump vertical elevation & body pitch kinematics
   let jumpY = 0;
   let targetPitch = 0;
 
   if (isJumpActive && !isFallen) {
-    // Smooth parabolic trajectory over hedge
     const arc = Math.sin(jumpT * Math.PI);
-    jumpY = arc * (JUMP_H * 0.082); // ~1.8m peak height in 3D
-    // Pitch nose up on takeoff (+0.48 rad), level at apex, pitch nose down on landing (-0.38 rad)
+    jumpY = arc * (JUMP_H * 0.082);
     targetPitch = Math.cos(jumpT * Math.PI) * 0.44;
   } else if (isRacing && !isFallen) {
-    // Gallop suspension bounce & subtle rocking pitch
     jumpY = Math.abs(Math.sin(p)) * 0.14 * clamp(speedNorm, 0.4, 1.4);
     targetPitch = Math.cos(p) * 0.09 * clamp(speedNorm, 0.4, 1.3);
   } else if (!isFallen) {
-    // Idle breathing bob
     jumpY = Math.sin(p) * 0.025;
     targetPitch = Math.sin(p * 0.5) * 0.02;
   }
@@ -481,13 +668,21 @@ export function updateHorseActorAnimation(actor, horseState, modelState, simCont
     actor.bodyPivot.rotation.z = lerp(actor.bodyPivot.rotation.z, targetPitch, clamp(dt * 16, 0, 1));
     actor.bodyPivot.rotation.x = 0;
 
-    // Neck and Jockey rhythm
     if (isRacing) {
+      const isBursting = modelState.boostT > 0;
       const neckSwing = Math.sin(p - 0.6) * 0.18 * clamp(speedNorm, 0.5, 1.4);
-      actor.neckPivot.rotation.z = -0.58 + neckSwing - (modelState.boostT > 0 ? 0.12 : 0);
+      actor.neckPivot.rotation.z = -0.58 + neckSwing - (isBursting ? 0.12 : 0);
       actor.headPivot.rotation.z = 0.45 - neckSwing * 0.6;
       actor.jockeyPivot.position.y = 0.44 + Math.sin(p * 2) * 0.04;
-      actor.jTorsoPivot.rotation.z = -0.78 - (modelState.boostT > 0 ? 0.20 : 0) + Math.sin(p) * 0.07;
+      actor.jTorsoPivot.rotation.z = -0.78 - (isBursting ? 0.20 : 0) + Math.sin(p) * 0.07;
+
+      // Animate jockey pumping arms & flourishing riding crop during overdrive bursts
+      if (actor.cropPivot) {
+        actor.cropPivot.rotation.z = isBursting ? Math.sin(nowMs * 0.028) * 0.65 : Math.sin(p) * 0.12;
+      }
+      if (actor.rightArmMesh) {
+        actor.rightArmMesh.rotation.z = -0.25 + (isBursting ? Math.sin(nowMs * 0.028) * 0.28 : Math.sin(p) * 0.08);
+      }
     } else {
       actor.neckPivot.rotation.z = -0.54 + Math.sin(p) * 0.05;
       actor.headPivot.rotation.z = 0.42 + Math.cos(p * 0.7) * 0.05;
@@ -504,7 +699,6 @@ export function updateHorseActorAnimation(actor, horseState, modelState, simCont
   actor.legs.forEach(leg => {
     const legAnglePhase = p + leg.phase * Math.PI * 2;
     if (isJumpActive && !isFallen) {
-      // Forelegs tuck forward and fold at the knee; hindlegs push back then tuck
       if (leg.isFront) {
         leg.shoulder.rotation.z = 0.75;
         leg.knee.rotation.z = -1.35;
@@ -518,14 +712,12 @@ export function updateHorseActorAnimation(actor, horseState, modelState, simCont
       const sRot = Math.sin(legAnglePhase) * amp;
       leg.shoulder.rotation.z = sRot;
 
-      // Knee bends naturally during the recovery forward swing
       const bend = Math.max(0, Math.cos(legAnglePhase));
       leg.knee.rotation.z = leg.isFront ? -bend * 1.12 : bend * 0.95;
     } else if (isFallen) {
       leg.shoulder.rotation.z = leg.isFront ? 0.65 : -0.65;
       leg.knee.rotation.z = leg.isFront ? -1.1 : 0.9;
     } else {
-      // Idle standing stance
       leg.shoulder.rotation.z = Math.sin(legAnglePhase) * 0.04;
       leg.knee.rotation.z = 0;
     }
